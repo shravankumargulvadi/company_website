@@ -1,0 +1,29 @@
+---
+import { site } from '../../config/site';
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <span>{site.wordmark}</span>
+  <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
+  <span>© {year}</span>
+</footer>
+
+<style>
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 28px var(--pad) 72px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .footer a:hover {
+    color: var(--fg);
+  }
+</style>

@@ -1,0 +1,91 @@
+---
+import Base from '../layouts/Base.astro';
+import { site, candidates } from '../config/site';
+
+const blurbs: Record<string, string> = {
+  'candidate-a': 'Alternate between the physical world and the world as the machine understands it.',
+  'candidate-b': 'The autonomy architecture itself, assembled piece by piece as you scroll.',
+  'candidate-c': 'One machine, continuously zooming out into a coordinated heterogeneous force.',
+};
+---
+
+<Base theme="index" title="Prototype candidates">
+  <main class="index">
+    <header>
+      <p class="eyebrow">Website exploration · 3 candidates</p>
+      <h1 class="headline">{site.tagline}</h1>
+    </header>
+    <ol>
+      {
+        candidates.map((c) => (
+          <li>
+            <a href={`/${c.slug}`}>
+              <span class="letter">{c.letter}</span>
+              <span class="title">{c.title}</span>
+              <span class="blurb">{blurbs[c.slug]}</span>
+              <span class="go mono">Open →</span>
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </main>
+</Base>
+
+<style>
+  .index {
+    min-height: 100vh;
+    padding: 12vh var(--pad) 10vh;
+    display: flex;
+    flex-direction: column;
+    gap: 8vh;
+  }
+  header {
+    display: grid;
+    gap: 18px;
+  }
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+  }
+  li a {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1.4fr) auto;
+    align-items: baseline;
+    gap: 24px;
+    padding: 30px 0;
+    border-bottom: 1px solid var(--line);
+    transition: padding 0.4s var(--ease), color 0.3s;
+  }
+  li a:hover {
+    padding-left: 12px;
+  }
+  .letter {
+    font-family: var(--font-mono);
+    color: var(--accent);
+  }
+  .title {
+    font-size: clamp(22px, 2.2vw, 32px);
+    letter-spacing: -0.01em;
+  }
+  .blurb {
+    color: var(--fg-dim);
+  }
+  .go {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  @media (max-width: 760px) {
+    li a {
+      grid-template-columns: 40px 1fr;
+    }
+    .blurb,
+    .go {
+      grid-column: 2;
+    }
+  }
+</style>

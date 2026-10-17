@@ -1,0 +1,671 @@
+---
+import Base from '../layouts/Base.astro';
+import SiteNav from '../components/shared/SiteNav.astro';
+import SiteFooter from '../components/shared/SiteFooter.astro';
+import ProofReel from '../components/shared/ProofReel.astro';
+import { site } from '../config/site';
+
+const stages = [
+  { k: 'Reality', h: 'The world as it is.', p: 'Uneven, partially hidden, and contested.' },
+  { k: 'Perception', h: 'What the sensors return.', p: 'Sparse, noisy, limited by range and line of sight.' },
+  { k: 'Belief', h: 'What the machine believes.', p: 'A model of the world — including where knowledge runs out.' },
+  { k: 'Risk', h: 'What could go wrong.', p: 'Terrain, threats and the unknown, weighed together.' },
+  { k: 'Decision', h: 'What it chooses to do.', p: 'Many possible paths. One taken, with the consequences understood.' },
+];
+const loop = ['Perceive', 'Build belief', 'Estimate risk', 'Plan', 'Act', 'Adapt'];
+const bodies = [
+  { id: 'ugv', k: 'Ground', p: 'Slope, soft terrain and water dominate.' },
+  { id: 'uav', k: 'Air', p: 'Terrain matters less. Exposure matters more.' },
+  { id: 'legged', k: 'Legged', p: 'Steep ground becomes traversable.' },
+  { id: 'maritime', k: 'Maritime', p: 'Land becomes the hazard.' },
+];
+---
+
+<Base theme="a" title="The Machine's Eyes">
+  <SiteNav />
+  <div class="gl-wrap" aria-hidden="true">
+    <canvas id="a-gl" class="gl"></canvas>
+    <canvas id="a-fallback" class="gl" hidden></canvas>
+    <div class="vignette"></div>
+  </div>
+
+  <main id="top">
+    <section class="sec" data-sec="hero" style="--h: 150vh">
+      <div class="sticky">
+        <div class="panel panel--hero" data-hero>
+          <p class="eyebrow">Autonomy for contested environments</p>
+          <h1 class="display">Deterrence<br /><em>through autonomy.</em></h1>
+          <p class="lede">{site.description}</p>
+          <p class="hint mono"><span class="hint__lens"></span>Move to see what the machine sees</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" data-sec="shift" style="--h: 170vh">
+      <div class="sticky">
+        <div class="panel panel--left" data-fade>
+          <p class="eyebrow">01 — The shift</p>
+          <h2 class="headline">Conflict is becoming autonomous.</h2>
+          <p class="lede">Unmanned systems now shape the battlefield. Advantage goes to machines that can keep acting when links fail and no one can intervene.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" data-sec="world" style="--h: 240vh">
+      <div class="sticky">
+        <div class="panel panel--left" data-fade>
+          <p class="eyebrow">02 — A different world</p>
+          <h2 class="headline">Most autonomy expects a tidy world.</h2>
+          <div class="versus">
+            <div>
+              <p class="eyebrow">Built for</p>
+              <ul><li>Roads and warehouses</li><li>Known maps</li><li>Reliable GPS</li><li>Predictable conditions</li></ul>
+            </div>
+            <div>
+              <p class="eyebrow eyebrow--accent">Needed for</p>
+              <ul><li>Unstructured terrain</li><li>No map at all</li><li>Denied navigation</li><li>An adversary</li></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" data-sec="reason" style="--h: 620vh">
+      <div class="sticky">
+        <div class="reason" data-fade>
+          <h2 class="headline reason__title">It doesn't just map the world.<br /><em>It reasons about what it doesn't know.</em></h2>
+          <ol class="rail" data-rail>
+            <span class="rail__bar"><span class="rail__fill" data-rail-fill></span></span>
+            {stages.map((s, i) => (
+              <li data-stage={i}>
+                <span class="rail__k mono">{String(i + 1).padStart(2, '0')} {s.k}</span>
+                <span class="rail__h">{s.h}</span>
+                <span class="rail__p">{s.p}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" data-sec="engine" style="--h: 240vh">
+      <div class="sticky">
+        <div class="panel panel--right" data-fade>
+          <p class="eyebrow">03 — The Autonomy Engine</p>
+          <h2 class="headline">One loop.<br />Uncertainty carried through every step.</h2>
+          <p class="lede">A platform-independent autonomy stack, from raw sensing to safe action.</p>
+          <ol class="loop mono">
+            {loop.map((l, i) => <li style={`--i:${i}`}>{l}</li>)}
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" data-sec="bodies" style="--h: 340vh">
+      <div class="sticky">
+        <div class="panel panel--left" data-fade>
+          <p class="eyebrow">04 — Multi-embodiment</p>
+          <h2 class="headline">Built for machines,<br /><em>not a machine.</em></h2>
+          <p class="lede">The same reasoning runs across platforms. What counts as risk changes with the body.</p>
+          <ul class="bodies" data-bodies>
+            {bodies.map((b) => (
+              <li data-body={b.id}>
+                <span class="mono">{b.k}</span>
+                <span>{b.p}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" data-sec="team" style="--h: 280vh">
+      <div class="sticky">
+        <div class="panel panel--right" data-fade>
+          <p class="eyebrow">05 — Orchestration OS</p>
+          <h2 class="headline">From autonomous machines to autonomous teams.</h2>
+          <p class="lede">An orchestration layer turns human intent into coordinated action across heterogeneous machines — sharing what each one learns and replanning as the mission unfolds.</p>
+          <p class="flow mono"><span>Intent</span><i></i><span>Orchestration</span><i></i><span>Machines</span><i class="back"></i></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="proof-sec" data-sec="proof">
+      <div class="proof-head">
+        <p class="eyebrow">06 — In development</p>
+        <h2 class="headline">Early technology.<br />Real foundations.</h2>
+        <p class="lede">Our autonomy stack is in active development in simulation and on ground platforms. These views come from that work.</p>
+      </div>
+      <ProofReel layout="feature" />
+    </section>
+
+    <section class="sec" data-sec="close" id="contact" style="--h: 130vh">
+      <div class="sticky">
+        <div class="panel panel--center" data-fade>
+          <h2 class="display">Deterrence<br /><em>through autonomy.</em></h2>
+          <p class="lede">Building the autonomy layer for machines operating where the world is uncertain.</p>
+          <div class="ctas">
+            <a class="btn" href={`mailto:${site.contactEmail}?subject=Partnership`}>Partner with us</a>
+            <a class="btn btn--ghost" href={`mailto:${site.contactEmail}?subject=Careers`}>Build with us</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="foot"><SiteFooter /></div>
+</Base>
+
+<script>
+  import { initMotion, hasWebGL, prefersReducedMotion, range, smooth, clamp } from '../lib/motion';
+  import type { SceneState } from '../components/candidate-a/sceneA';
+
+  const { gsap } = initMotion();
+  const reduced = prefersReducedMotion();
+  type Key = { sec: string; at: number; s: Partial<SceneState> };
+
+  /* Scene keyframes anchored to section scroll progress (0 = section top at viewport top). */
+  const KEYS: Key[] = [
+    { sec: 'hero', at: 0, s: { relief: 1, structured: 0, belief: 0, points: 0, risk: 0, plans: 0, lens: 1, known: 0, profile: 0, team: 0, others: 0, dist: 3.4, elev: 0.36, azim: 0.9, focus: 0, dim: 0 } },
+    { sec: 'hero', at: 0.6, s: { lens: 1, dist: 3.8 } },
+    { sec: 'shift', at: 0, s: { lens: 0, dist: 4.2, elev: 0.42, azim: 1.5 } },
+    { sec: 'shift', at: 0.8, s: { dist: 5.2, elev: 0.62 } },
+    { sec: 'world', at: 0, s: { structured: 1, relief: 0.03, dist: 6, elev: 0.85, azim: 1.7 } },
+    { sec: 'world', at: 0.25, s: { structured: 1, relief: 0.03 } },
+    { sec: 'world', at: 0.85, s: { structured: 0, relief: 1, dist: 4.4, elev: 0.55, azim: 1.9 } },
+    { sec: 'reason', at: 0, s: { belief: 0, points: 0, dim: 0, dist: 3.1, elev: 0.5, azim: 2.1 } },
+    { sec: 'reason', at: 0.14, s: { points: 0, dim: 0 } },
+    { sec: 'reason', at: 0.26, s: { points: 1, dim: 0.8, dist: 2.7 } },
+    { sec: 'reason', at: 0.36, s: { belief: 0 } },
+    { sec: 'reason', at: 0.48, s: { belief: 1, known: 0.15, points: 0.35, dim: 0.8, dist: 3.4, elev: 0.62 } },
+    { sec: 'reason', at: 0.56, s: { risk: 0 } },
+    { sec: 'reason', at: 0.68, s: { risk: 1, known: 0.3, elev: 0.66 } },
+    { sec: 'reason', at: 0.76, s: { plans: 0 } },
+    { sec: 'reason', at: 0.88, s: { plans: 1, dist: 3, elev: 0.6, azim: 2.4 } },
+    { sec: 'engine', at: 0, s: { belief: 1, risk: 0.8, plans: 1, points: 0.4, dist: 2.8, elev: 0.5, azim: 2.8 } },
+    { sec: 'engine', at: 0.9, s: { azim: 3.3 } },
+    { sec: 'bodies', at: 0, s: { others: 1, focus: 1, plans: 0, points: 0, risk: 1, known: 0.5, dist: 4.2, elev: 0.85, profile: 0 } },
+    { sec: 'bodies', at: 0.15, s: { profile: 0 } },
+    { sec: 'bodies', at: 0.38, s: { profile: 1 } },
+    { sec: 'bodies', at: 0.62, s: { profile: 2 } },
+    { sec: 'bodies', at: 0.85, s: { profile: 3, azim: 3.8 } },
+    { sec: 'team', at: 0, s: { team: 1, profile: 0, risk: 0.45, known: 0, dist: 9, elev: 1.05, azim: 4.0 } },
+    { sec: 'team', at: 0.9, s: { dist: 10, azim: 4.3 } },
+    { sec: 'close', at: 0, s: { known: 0, team: 0, others: 0, focus: 0, belief: 0, risk: 0, plans: 0, points: 0, dim: 0, lens: 1, dist: 3, elev: 0.22, azim: 5.2 } },
+  ];
+
+  const sections = new Map<string, HTMLElement>();
+  document.querySelectorAll<HTMLElement>('[data-sec]').forEach((el) => sections.set(el.dataset.sec!, el));
+
+  let anchors: { y: number; s: SceneState }[] = [];
+  function layoutKeys() {
+    const vh = window.innerHeight;
+    let acc = { ...KEYS[0].s } as SceneState;
+    anchors = KEYS.map((k) => {
+      const el = sections.get(k.sec)!;
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      const span = Math.max(0, el.offsetHeight - vh);
+      acc = { ...acc, ...k.s };
+      return { y: top + k.at * span, s: acc };
+    });
+  }
+
+  function stateAt(y: number): SceneState {
+    if (y <= anchors[0].y) return anchors[0].s;
+    for (let i = 1; i < anchors.length; i++) {
+      const a = anchors[i - 1];
+      const b = anchors[i];
+      if (y <= b.y) {
+        const t = smooth(range(y, a.y, b.y));
+        const out = {} as SceneState;
+        for (const key in b.s) {
+          const k = key as keyof SceneState;
+          out[k] = a.s[k] + (b.s[k] - a.s[k]) * t;
+        }
+        return out;
+      }
+    }
+    return anchors[anchors.length - 1].s;
+  }
+
+  /* Text panels fade in/out as each sticky section passes. */
+  document.querySelectorAll<HTMLElement>('[data-fade]').forEach((panel) => {
+    const sec = panel.closest('[data-sec]') as HTMLElement;
+    gsap.timeline({ scrollTrigger: { trigger: sec, start: 'top 75%', end: 'bottom 25%', scrub: reduced ? true : 0.6 } })
+      .fromTo(panel, { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, duration: 1, ease: 'power2.out' })
+      .to(panel, { autoAlpha: 1, duration: 3 })
+      .to(panel, { autoAlpha: 0, y: -40, duration: 1, ease: 'power2.in' });
+  });
+  gsap.to('[data-hero]', {
+    autoAlpha: 0, y: -60,
+    scrollTrigger: { trigger: sections.get('hero'), start: 'top top', end: 'bottom 40%', scrub: 0.6 },
+  });
+
+  /* Section-local UI driven from scroll position. */
+  const rail = document.querySelector<HTMLElement>('[data-rail]')!;
+  const railItems = [...rail.querySelectorAll<HTMLElement>('[data-stage]')];
+  const railFill = document.querySelector<HTMLElement>('[data-rail-fill]')!;
+  const bodyItems = [...document.querySelectorAll<HTMLElement>('[data-body]')];
+  const proofSec = sections.get('proof')!;
+  const STAGE_AT = [0, 0.2, 0.4, 0.6, 0.8];
+
+  function sectionProgress(name: string) {
+    const el = sections.get(name)!;
+    const r = el.getBoundingClientRect();
+    return clamp(-r.top / Math.max(1, el.offsetHeight - window.innerHeight));
+  }
+
+  function updateUI(s: SceneState) {
+    const p = sectionProgress('reason');
+    let active = 0;
+    STAGE_AT.forEach((a, i) => p >= a && (active = i));
+    railItems.forEach((li, i) => li.classList.toggle('is-active', i === active));
+    railItems.forEach((li, i) => li.classList.toggle('is-past', i < active));
+    railFill.style.transform = `scaleY(${p})`;
+    const bi = Math.round(clamp(s.profile, 0, 3));
+    bodyItems.forEach((li, i) => li.classList.toggle('is-active', i === bi));
+  }
+
+  /* Scene boot: lazy so hero text paints first. */
+  const canvas = document.getElementById('a-gl') as HTMLCanvasElement;
+  const fallback = document.getElementById('a-fallback') as HTMLCanvasElement;
+
+  async function boot() {
+    layoutKeys();
+    window.addEventListener('resize', layoutKeys);
+    const ro = new ResizeObserver(layoutKeys);
+    ro.observe(document.body);
+
+    if (!hasWebGL()) {
+      canvas.hidden = true;
+      fallback.hidden = false;
+      const [{ SimView }, { createWorld }, { fitCanvas, visibleLoop }] = await Promise.all([
+        import('../lib/simView'),
+        import('../lib/world'),
+        import('../lib/motion'),
+      ]);
+      fitCanvas(fallback, 1);
+      const view = new SimView(fallback, createWorld({ size: 128, seed: 11 }), 'belief', 30);
+      fallback.classList.add('is-ready');
+      visibleLoop(fallback, (t) => {
+        fitCanvas(fallback, 1);
+        view.draw(t);
+        updateUI(stateAt(window.scrollY));
+      });
+      return;
+    }
+
+    const { EyesScene } = await import('../components/candidate-a/sceneA');
+    const lowPower = window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
+    const scene = new EyesScene(canvas, { lowPower });
+    scene.resize();
+    window.addEventListener('resize', () => scene.resize());
+    window.addEventListener('pointermove', (e) => scene.setPointer(e.clientX, e.clientY), { passive: true });
+
+    let cur = stateAt(window.scrollY);
+    let last = performance.now();
+    let first = true;
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const target = stateAt(window.scrollY);
+      const k = reduced ? 1 : 1 - Math.exp(-dt * 6);
+      for (const key in target) {
+        const kk = key as keyof SceneState;
+        cur[kk] += (target[kk] - cur[kk]) * k;
+      }
+      updateUI(cur);
+      const pr = proofSec.getBoundingClientRect();
+      const covered = pr.top <= 0 && pr.bottom >= window.innerHeight;
+      if (!covered && !document.hidden) {
+        scene.frame(dt, cur);
+        if (first) {
+          canvas.classList.add('is-ready');
+          first = false;
+        }
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  if ('requestIdleCallback' in window) requestIdleCallback(() => boot(), { timeout: 300 });
+  else setTimeout(boot, 50);
+</script>
+
+<style>
+  .gl-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(120% 80% at 70% 60%, #15161a 0%, var(--bg) 60%);
+  }
+  .gl {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1.6s var(--ease);
+  }
+  .gl:global(.is-ready) {
+    opacity: 1;
+  }
+  #a-fallback:global(.is-ready) {
+    opacity: 0.6;
+  }
+  .vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(6, 7, 8, 0.85) 0%, rgba(6, 7, 8, 0.2) 45%, rgba(6, 7, 8, 0) 70%),
+      linear-gradient(0deg, rgba(6, 7, 8, 0.6) 0%, rgba(6, 7, 8, 0) 30%);
+  }
+  main {
+    position: relative;
+    z-index: 1;
+  }
+  .sec {
+    position: relative;
+    height: var(--h, 100vh);
+  }
+  .sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--pad);
+    pointer-events: none;
+  }
+  .sticky :global(a) {
+    pointer-events: auto;
+  }
+  .panel {
+    display: grid;
+    gap: 22px;
+    max-width: 620px;
+  }
+  .panel--right {
+    margin-left: auto;
+  }
+  .panel--center {
+    margin: 0 auto;
+    text-align: center;
+    justify-items: center;
+    max-width: 900px;
+  }
+  .panel--hero {
+    max-width: 900px;
+    gap: 26px;
+  }
+  em {
+    font-style: italic;
+    color: var(--fg-dim);
+  }
+  .display em,
+  .headline em {
+    color: inherit;
+    opacity: 0.62;
+  }
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    margin-top: 16px;
+  }
+  .hint__lens {
+    width: 18px;
+    height: 18px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    animation: pulse 2.4s var(--ease) infinite;
+  }
+  @keyframes pulse {
+    50% {
+      transform: scale(1.35);
+      opacity: 0.4;
+    }
+  }
+  .versus {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 10px;
+  }
+  .versus ul {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+    font-size: 17px;
+  }
+  .versus div:first-child ul {
+    color: var(--fg-faint);
+    text-decoration: line-through;
+    text-decoration-color: rgba(235, 231, 222, 0.25);
+  }
+  .eyebrow--accent {
+    color: var(--accent);
+  }
+
+  /* signature stage rail */
+  .reason {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    padding: 16vh 0 10vh;
+  }
+  .reason__title {
+    font-size: clamp(28px, 3.4vw, 52px);
+    max-width: 18em;
+  }
+  .rail {
+    position: relative;
+    align-self: end;
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 22px;
+    display: grid;
+    gap: 14px;
+    max-width: 380px;
+  }
+  .rail__bar {
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 1px;
+    background: var(--line);
+  }
+  .rail__fill {
+    position: absolute;
+    inset: 0;
+    background: var(--fg);
+    transform-origin: top;
+    transform: scaleY(0);
+  }
+  .rail li {
+    display: grid;
+    gap: 4px;
+    opacity: 0.32;
+    transition: opacity 0.5s var(--ease);
+  }
+  .rail li.is-past {
+    opacity: 0.5;
+  }
+  .rail li.is-active {
+    opacity: 1;
+  }
+  .rail__k {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .rail__h,
+  .rail__p {
+    display: none;
+  }
+  .rail li.is-active .rail__h {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 30px;
+    line-height: 1.1;
+  }
+  .rail li.is-active .rail__p {
+    display: block;
+    color: var(--fg-dim);
+  }
+  .rail li.is-active .rail__k {
+    color: var(--signal);
+  }
+
+  /* autonomy loop */
+  .loop {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 0;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .loop li {
+    color: var(--fg-faint);
+    animation: step 6s infinite;
+    animation-delay: calc(var(--i) * 1s);
+  }
+  .loop li:not(:last-child)::after {
+    content: '→';
+    margin: 0 12px;
+    color: var(--fg-faint);
+  }
+  .loop li:last-child::after {
+    content: '↺';
+    margin-left: 12px;
+    color: var(--fg-faint);
+  }
+  @keyframes step {
+    0%,
+    14% {
+      color: var(--signal);
+    }
+    20%,
+    100% {
+      color: var(--fg-faint);
+    }
+  }
+
+  /* embodiments */
+  .bodies {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+    border-top: 1px solid var(--line);
+  }
+  .bodies li {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--fg-faint);
+    transition: color 0.4s var(--ease);
+  }
+  .bodies li .mono {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding-top: 3px;
+  }
+  .bodies li.is-active {
+    color: var(--fg);
+  }
+  .bodies li.is-active .mono {
+    color: var(--accent);
+  }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .flow i {
+    width: 32px;
+    height: 1px;
+    background: var(--signal);
+    opacity: 0.6;
+  }
+  .flow i.back {
+    width: 14px;
+    background: none;
+    border: 1px solid var(--signal);
+    border-left: 0;
+    height: 14px;
+    border-radius: 0 8px 8px 0;
+  }
+
+  /* proof */
+  .proof-sec {
+    position: relative;
+    background: var(--bg);
+    padding: 22vh var(--pad) 18vh;
+    display: grid;
+    gap: 8vh;
+    min-height: 100vh;
+  }
+  .proof-head {
+    display: grid;
+    gap: 20px;
+    max-width: 640px;
+  }
+  .ctas {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  .foot {
+    position: relative;
+    z-index: 1;
+    background: var(--bg);
+  }
+
+  @media (max-width: 760px) {
+    .vignette {
+      background: linear-gradient(0deg, rgba(6, 7, 8, 0.9) 0%, rgba(6, 7, 8, 0.3) 60%, rgba(6, 7, 8, 0.4) 100%);
+    }
+    .sticky {
+      align-items: flex-end;
+      padding-bottom: 12vh;
+    }
+    .panel--right {
+      margin-left: 0;
+    }
+    .versus {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    .reason {
+      padding: 12vh 0 8vh;
+    }
+    .rail li.is-active .rail__h {
+      font-size: 24px;
+    }
+  }
+</style>

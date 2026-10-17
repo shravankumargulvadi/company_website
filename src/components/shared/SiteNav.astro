@@ -1,0 +1,49 @@
+---
+import { site } from '../../config/site';
+---
+
+<header class="nav">
+  <a href="#top" class="nav__mark" aria-label={`${site.name} home`}>
+    <svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true">
+      <path d="M5 23 L16 7 L27 23" fill="none" stroke="currentColor" stroke-width="2.4"></path>
+      <circle cx="16" cy="20.5" r="2.6" fill="var(--accent)"></circle>
+    </svg>
+    <span>{site.wordmark}</span>
+  </a>
+  <a href="#contact" class="nav__cta">Contact</a>
+</header>
+
+<style>
+  .nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px var(--pad);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    pointer-events: none;
+    mix-blend-mode: difference;
+    color: #fff;
+  }
+  .nav a {
+    pointer-events: auto;
+  }
+  .nav__mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+  }
+  .nav__cta {
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+  .nav__cta:hover {
+    opacity: 1;
+  }
+</style>

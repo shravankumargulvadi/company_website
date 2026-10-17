@@ -1,0 +1,145 @@
+---
+import { proofItems } from '../../config/proof';
+
+interface Props {
+  layout?: 'feature' | 'row' | 'log';
+}
+const { layout = 'row' } = Astro.props;
+---
+
+<div class:list={['proof', `proof--${layout}`]}>
+  {
+    proofItems.map((item, i) => (
+      <figure class="proof__item">
+        <div class="proof__media">
+          {item.video ? (
+            <video src={item.video} poster={item.poster} muted loop playsinline autoplay preload="none" />
+          ) : (
+            <>
+              <canvas data-sim={item.placeholder} aria-label={item.caption} role="img" />
+              <span class="proof__tag">Placeholder · replace with capture</span>
+            </>
+          )}
+        </div>
+        <figcaption>
+          <span class="proof__idx">{String(i + 1).padStart(2, '0')}</span>
+          <span class="proof__label">{item.label}</span>
+          <span class="proof__cap">{item.caption}</span>
+        </figcaption>
+      </figure>
+    ))
+  }
+</div>
+
+<script>
+  import { whenNear, visibleLoop, fitCanvas } from '../../lib/motion';
+
+  document.querySelectorAll<HTMLCanvasElement>('canvas[data-sim]').forEach((canvas) => {
+    whenNear(canvas, async () => {
+      const [{ SimView }, { createWorld }] = await Promise.all([
+        import('../../lib/simView'),
+        import('../../lib/world'),
+      ]);
+      const world = createWorld({ size: 128, seed: 11 });
+      fitCanvas(canvas, 1.5);
+      const view = new SimView(canvas, world, canvas.dataset.sim as 'plan' | 'risk' | 'belief');
+      const offset = Math.random() * 10;
+      visibleLoop(canvas, (t) => {
+        fitCanvas(canvas, 1.5);
+        view.draw(t + offset);
+      });
+    });
+  });
+</script>
+
+<style>
+  .proof {
+    display: grid;
+    gap: clamp(16px, 2vw, 28px);
+  }
+  .proof--row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .proof--feature {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto auto;
+  }
+  .proof--feature .proof__item:first-child {
+    grid-row: span 2;
+  }
+  .proof--feature .proof__item:first-child .proof__media {
+    aspect-ratio: auto;
+    height: calc(100% - 64px);
+    min-height: 320px;
+  }
+  .proof--log {
+    grid-template-columns: 1fr;
+  }
+  .proof--log .proof__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: end;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .proof__media {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: #0a0c0e;
+    border: 1px solid var(--line);
+  }
+  .proof__media canvas,
+  .proof__media video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .proof__tag {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+  }
+  figcaption {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 14px;
+    padding-top: 14px;
+  }
+  .proof__idx {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-faint);
+    grid-row: span 2;
+  }
+  .proof__label {
+    font-size: 15px;
+  }
+  .proof__cap {
+    font-size: 13px;
+    color: var(--fg-dim);
+  }
+  figure {
+    margin: 0;
+  }
+  @media (max-width: 860px) {
+    .proof--row,
+    .proof--feature {
+      grid-template-columns: 1fr;
+    }
+    .proof--feature .proof__item:first-child .proof__media {
+      height: auto;
+      aspect-ratio: 16 / 10;
+      min-height: 0;
+    }
+    .proof--log .proof__item {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
