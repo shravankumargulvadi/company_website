@@ -103,6 +103,7 @@ const MAP_VERT = /* glsl */ `
   uniform float uBase;
   uniform float uVS;
   uniform float uPlane;
+  uniform float uFloor;
   varying float vRisk;
   varying float vKnown;
   varying vec3 vW;
@@ -114,7 +115,7 @@ const MAP_VERT = /* glsl */ `
     float nz = (aSeed - 0.5) * (0.08 + 1.2 * unc * unc) * (0.3 + aRisk);
     float hk = (min(aH - uBase, 2.4) + nz) * uVS;
     vec3 p = vec3(position.x, mix(uPlane, hk, grow), position.z);
-    vRisk = clamp(aRisk + 0.15 * unc * (1.0 - aRisk) + nz * 0.35, -0.2, 1.0);
+    vRisk = clamp(aRisk + 0.15 * unc * (1.0 - aRisk) + nz * 1.3 + (aH - uFloor) * 0.45 * (1.0 - aRisk), -0.2, 1.0);
     vKnown = grow;
     vW = p;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
@@ -203,7 +204,7 @@ export class DeepScene {
   private w = 1;
   private h = 1;
   private time = 0;
-  private readonly VS = 1.0;
+  private readonly VS = 1.3;
   private centre: [number, number];
 
   constructor(private canvas: HTMLCanvasElement, private P: Passage, opts: { lowPower?: boolean } = {}) {
@@ -269,6 +270,7 @@ export class DeepScene {
       uniforms: {
         uS: { value: 0 }, uRange: { value: P.range }, uBase: { value: P.base },
         uVS: { value: this.VS }, uPlane: { value: plane },
+        uFloor: { value: P.path.reduce((m, p) => m + p.y, 0) / P.path.length },
       },
     });
     const surf = new THREE.Mesh(geo, this.mapMat);
@@ -322,7 +324,7 @@ export class DeepScene {
     this.fpvCam.updateProjectionMatrix();
     this.mapCam.updateProjectionMatrix();
     const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.mapCam.fov / 2)) * Math.min(1, aspect));
-    this.mapDist = (this.P.extent * 0.46) / Math.tan(half);
+    this.mapDist = (this.P.extent * 0.4) / Math.tan(half);
   }
 
   frame(dt: number, s: number) {
@@ -372,7 +374,7 @@ export class DeepScene {
 
     const [cx, cz] = this.centre;
     const az = -2.0 + (s / P.length) * 0.5 + 0.04 * Math.sin(this.time * 0.2);
-    const el = 0.62;
+    const el = 0.56;
     const tx = cx + (pose.x - cx) * 0.08;
     const tz = cz + (pose.z - cz) * 0.08;
     const d = this.mapDist;
