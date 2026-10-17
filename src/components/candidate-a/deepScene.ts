@@ -49,6 +49,23 @@ const ROCK_FRAG = /* glsl */ `
   varying vec3 vW;
   varying vec3 vN;
   ${NOISE}
+  uniform float uTex;
+  uniform sampler2D uWallD;
+  uniform sampler2D uWallN;
+  uniform sampler2D uFloorD;
+  uniform sampler2D uFloorN;
+  vec3 tri(sampler2D t, vec3 p, vec3 w, float sc) {
+    return texture2D(t, p.zy * sc).rgb * w.x + texture2D(t, p.xz * sc).rgb * w.y + texture2D(t, p.xy * sc).rgb * w.z;
+  }
+  vec3 triN(sampler2D t, vec3 p, vec3 n, vec3 w, float sc) {
+    vec3 tx = texture2D(t, p.zy * sc).xyz * 2.0 - 1.0;
+    vec3 ty = texture2D(t, p.xz * sc).xyz * 2.0 - 1.0;
+    vec3 tz = texture2D(t, p.xy * sc).xyz * 2.0 - 1.0;
+    tx = vec3(tx.xy + n.zy, abs(tx.z) * n.x);
+    ty = vec3(ty.xy + n.xz, abs(ty.z) * n.y);
+    tz = vec3(tz.xy + n.xy, abs(tz.z) * n.z);
+    return normalize(tx.zyx * w.x + ty.xzy * w.y + tz.xyz * w.z);
+  }
   void main() {
     vec3 p = vW;
     float dc0 = length(uCam - p);
@@ -68,6 +85,16 @@ const ROCK_FRAG = /* glsl */ `
 
     float alb = 0.26 + 0.26 * big + 0.04 * strata + 0.05 * detail * (noise(p * 9.0) - 0.5);
     alb *= mix(0.8, 1.05, smoothstep(-0.2, 0.7, N.y));
+    if (uTex > 0.5) {
+      vec3 n0 = normalize(vN);
+      if (!gl_FrontFacing) n0 = -n0;
+      vec3 w = pow(abs(n0), vec3(4.0));
+      w /= (w.x + w.y + w.z);
+      float fl = smoothstep(0.55, 0.85, n0.y);
+      float lum = mix(tri(uWallD, p, w, 0.42).r, tri(uFloorD, p, w, 0.5).r, fl);
+      alb = lum * (0.75 + 0.5 * big) * 1.6;
+      N = normalize(mix(triN(uWallN, p, n0, w, 0.42), triN(uFloorN, p, n0, w, 0.5), fl) + (N - n0) * 0.4);
+    }
 
     vec3 L = uLamp - p;
     float d = length(L);
@@ -115,7 +142,7 @@ const MAP_VERT = /* glsl */ `
     float nz = (aSeed - 0.5) * (0.08 + 1.2 * unc * unc) * (0.3 + aRisk);
     float hk = (min(aH - uBase, 2.4) + nz) * uVS;
     vec3 p = vec3(position.x, mix(uPlane, hk, grow), position.z);
-    vRisk = clamp(aRisk + 0.15 * unc * (1.0 - aRisk) + nz * 1.3 + (aH - uFloor) * 0.45 * (1.0 - aRisk), -0.2, 1.0);
+    vRisk = clamp(aRisk + 0.15 * unc * (1.0 - aRisk) + nz * 0.8 + ((aH - uFloor) * 0.4 + 0.08 + (aSeed - 0.5) * 0.22) * (1.0 - aRisk), -0.2, 1.0);
     vKnown = grow;
     vW = p;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
@@ -133,9 +160,9 @@ const MAP_FRAG = /* glsl */ `
     vec3 N = normalize(cross(dFdx(vW), dFdy(vW)));
     if (N.y < 0.0) N = -N;
     float lit = 0.86 + 0.14 * max(dot(N, normalize(vec3(0.4, 1.0, 0.3))), 0.0);
-    vec3 col = hue(fract((120.0 + vRisk * 240.0) / 360.0));
-    vec2 g = abs(fract(vW.xz) - 0.5);
-    vec3 unk = mix(vec3(0.26, 0.27, 0.29), vec3(0.32, 0.33, 0.35), step(0.47, max(g.x, g.y)));
+    float t = vRisk < 0.0 ? vRisk : smoothstep(0.08, 0.95, vRisk);
+    vec3 col = hue(fract((120.0 + t * 240.0) / 360.0));
+    vec3 unk = vec3(0.1, 0.78, 0.1);
     gl_FragColor = vec4(mix(unk, col, step(0.02, vKnown)) * lit, 1.0);
   }
 `;
@@ -227,8 +254,11 @@ export class DeepScene {
         uLamp: { value: new THREE.Vector3() },
         uLampDir: { value: new THREE.Vector3(1, 0, 0) },
         uTime: { value: 0 },
+        uTex: { value: 0 },
+        uWallD: { value: null }, uWallN: { value: null }, uFloorD: { value: null }, uFloorN: { value: null },
       },
     });
+    this.loadRock();
     this.fpv.add(new THREE.Mesh(surface(P, P.floor), this.rockMat));
     this.fpv.add(new THREE.Mesh(surface(P, P.ceil), this.rockMat));
     this.fpv.add(new THREE.AmbientLight(0xffffff, 0.35));
@@ -277,7 +307,7 @@ export class DeepScene {
     surf.frustumCulled = false;
     this.map.add(surf);
 
-    const grid = new THREE.GridHelper(P.extent * 1.8, 54, 0x3a3d42, 0x303236);
+    const grid = new THREE.GridHelper(P.extent * 1.8, 54, 0x47494c, 0x3b3d40);
     grid.position.set(P.extent / 2, plane - 0.02, P.extent / 2);
     this.map.add(grid);
 
@@ -285,6 +315,24 @@ export class DeepScene {
     const tp = this.trail.geometry.attributes.position as THREE.BufferAttribute;
     P.path.forEach((p, i) => tp.setXYZ(i, p.x, this.mapY(p.y) + 0.08, p.z));
     this.map.add(this.trail, this.axes);
+  }
+
+  private loadRock() {
+    const loader = new THREE.TextureLoader();
+    const names = ['wall_diff', 'wall_nor', 'floor_diff', 'floor_nor'];
+    Promise.all(names.map((f) => loader.loadAsync(`/assets/underground/${f}.jpg`)))
+      .then((tex) => {
+        const aniso = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+        tex.forEach((t, i) => {
+          t.wrapS = t.wrapT = THREE.RepeatWrapping;
+          t.anisotropy = aniso;
+          if (i % 2 === 0) t.colorSpace = THREE.SRGBColorSpace;
+        });
+        const U = this.rockMat.uniforms;
+        [U.uWallD.value, U.uWallN.value, U.uFloorD.value, U.uFloorN.value] = tex;
+        U.uTex.value = 1;
+      })
+      .catch(() => {});
   }
 
   private mapY(y: number) {
@@ -324,7 +372,7 @@ export class DeepScene {
     this.fpvCam.updateProjectionMatrix();
     this.mapCam.updateProjectionMatrix();
     const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.mapCam.fov / 2)) * Math.min(1, aspect));
-    this.mapDist = (this.P.extent * 0.4) / Math.tan(half);
+    this.mapDist = (this.P.extent * 0.5) / Math.tan(half);
   }
 
   frame(dt: number, s: number) {
@@ -374,7 +422,7 @@ export class DeepScene {
 
     const [cx, cz] = this.centre;
     const az = -2.0 + (s / P.length) * 0.5 + 0.04 * Math.sin(this.time * 0.2);
-    const el = 0.56;
+    const el = 0.6;
     const tx = cx + (pose.x - cx) * 0.08;
     const tz = cz + (pose.z - cz) * 0.08;
     const d = this.mapDist;
@@ -386,11 +434,11 @@ export class DeepScene {
     const views: [THREE.Scene, THREE.Camera, number, number, number, number, number][] = this.vertical
       ? [
           [this.fpv, this.fpvCam, 0x050505, 0, Math.floor(h / 2), w, h - Math.floor(h / 2)],
-          [this.map, this.mapCam, 0x232528, 0, 0, w, Math.floor(h / 2)],
+          [this.map, this.mapCam, 0x2e2f31, 0, 0, w, Math.floor(h / 2)],
         ]
       : [
           [this.fpv, this.fpvCam, 0x050505, 0, 0, Math.floor(w / 2), h],
-          [this.map, this.mapCam, 0x232528, Math.floor(w / 2), 0, w - Math.floor(w / 2), h],
+          [this.map, this.mapCam, 0x2e2f31, Math.floor(w / 2), 0, w - Math.floor(w / 2), h],
         ];
     for (const [scene, cam, clear, x, y, vw, vh] of views) {
       renderer.setClearColor(clear, 1);

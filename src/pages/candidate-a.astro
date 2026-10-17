@@ -16,7 +16,7 @@ const beats = [
   { h: 'No GPS. No light. No map.', p: 'Underground, under canopy, inside structures — where remote control fails first.' },
   { h: 'Every cell it sees gets a height — and a price.', p: 'Range returns become a 2.5D elevation map. Slope, steps and rubble become risk.' },
   { h: 'Glimpsed from afar, it stays expensive.', p: 'Confidence grows as the machine gets closer. Risk only falls when the evidence earns it.' },
-  { h: "What it hasn't seen is never free.", p: 'Unobserved space is priced, not assumed open — so the path stays where the evidence is.' },
+  { h: 'Unknown is not the same as safe.', p: 'The flat green plane is ground no sensor has touched. The planner treats it as risk until range data says otherwise.' },
 ];
 const loop = ['Perceive', 'Build belief', 'Estimate risk', 'Plan', 'Act', 'Adapt'];
 const bodies = [
@@ -739,8 +739,8 @@ const bodies = [
     pointer-events: none;
     background:
       linear-gradient(90deg, transparent calc(50% - 0.5px), var(--line) calc(50% - 0.5px), var(--line) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-      linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%),
-      radial-gradient(ellipse 30% 60% at 25% 50%, transparent 55%, rgba(5, 5, 6, 0.55) 100%);
+      linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%) 0 0 / 50% 100% no-repeat,
+      radial-gradient(ellipse 60% 60% at 50% 50%, transparent 55%, rgba(5, 5, 6, 0.55) 100%) 0 0 / 50% 100% no-repeat;
   }
   .deep__tag {
     position: absolute;
@@ -812,6 +812,8 @@ const bodies = [
     font-size: 11px;
     letter-spacing: 0.08em;
     color: var(--fg-dim);
+    padding: 10px 12px;
+    background: rgba(5, 5, 6, 0.72);
   }
   .deep__ramp,
   .deep__unk {
@@ -822,7 +824,7 @@ const bodies = [
     background: linear-gradient(90deg, hsl(120 90% 45%), hsl(180 90% 45%), hsl(240 90% 58%), hsl(300 90% 52%), hsl(360 90% 50%));
   }
   .deep__unk {
-    background: #45484d;
+    background: rgb(26, 199, 26);
     outline: 1px solid var(--line);
   }
   .deep.is-flat .deep__tag--l,

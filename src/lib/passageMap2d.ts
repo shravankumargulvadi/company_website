@@ -17,9 +17,9 @@ export class PassageMap2D {
     const h = document.createElement('canvas');
     h.width = h.height = 8;
     const hc = h.getContext('2d')!;
-    hc.fillStyle = '#2b2d31';
+    hc.fillStyle = '#1ac71a';
     hc.fillRect(0, 0, 8, 8);
-    hc.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+    hc.strokeStyle = 'rgba(0, 0, 0, 0.08)';
     hc.beginPath();
     hc.moveTo(0, 8);
     hc.lineTo(8, 0);
@@ -32,7 +32,7 @@ export class PassageMap2D {
     const W = this.canvas.width;
     const Hc = this.canvas.height;
     const n = P.n;
-    ctx.fillStyle = '#232528';
+    ctx.fillStyle = '#2e2f31';
     ctx.fillRect(0, 0, W, Hc);
     const size = Math.min(W, Hc) * 0.94;
     const ox = (W - size) / 2;
