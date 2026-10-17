@@ -353,8 +353,7 @@ export const PASSAGE_RAMP: [number, number, number][] = [
 ];
 
 export function passageRamp(t: number): [number, number, number] {
-  const [a, b, c] = PASSAGE_RAMP;
-  const m = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5;
-  const [p, q] = t < 0.5 ? [a, b] : [b, c];
-  return [p[0] + (q[0] - p[0]) * m, p[1] + (q[1] - p[1]) * m, p[2] + (q[2] - p[2]) * m];
+  const h = (((120 + Math.max(-0.2, Math.min(1, t)) * 240) % 360) + 360) % 360 / 60;
+  const ch = (o: number) => Math.max(0, Math.min(1, Math.abs(((h + o) % 6) - 3) - 1)) * 242;
+  return [ch(0), ch(4), ch(2)];
 }

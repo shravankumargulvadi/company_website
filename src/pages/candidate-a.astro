@@ -99,8 +99,8 @@ const bodies = [
         <canvas id="a-deep" class="deep__gl" aria-label="The machine's camera view of a dark passage beside the 2.5D risk map it builds while driving" role="img"></canvas>
         <canvas id="a-deep-2d" class="deep__gl" hidden></canvas>
         <div class="deep__shade" aria-hidden="true"></div>
-        <p class="deep__tag deep__tag--l mono">Machine view · camera</p>
-        <p class="deep__tag deep__tag--r mono">Belief · 2.5D risk map</p>
+        <p class="deep__tag deep__tag--l mono">Rover · chase camera</p>
+        <p class="deep__tag deep__tag--r mono">Belief · 2.5D elevation &amp; risk map</p>
         <div class="deep__copy">
           <p class="eyebrow">03 — Underground</p>
           <ol class="deep__beats">
@@ -819,10 +819,10 @@ const bodies = [
     height: 8px;
   }
   .deep__ramp {
-    background: linear-gradient(90deg, rgb(58, 72, 82), rgb(168, 98, 36), rgb(255, 124, 52));
+    background: linear-gradient(90deg, hsl(120 90% 45%), hsl(180 90% 45%), hsl(240 90% 58%), hsl(300 90% 52%), hsl(360 90% 50%));
   }
   .deep__unk {
-    background: repeating-linear-gradient(135deg, rgba(168, 98, 36, 0.45) 0 1px, #0b0c0e 1px 5px);
+    background: #45484d;
     outline: 1px solid var(--line);
   }
   .deep.is-flat .deep__tag--l,
