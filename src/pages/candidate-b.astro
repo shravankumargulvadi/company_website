@@ -1,0 +1,466 @@
+---
+import Base from '../layouts/Base.astro';
+import SiteNav from '../components/shared/SiteNav.astro';
+import SiteFooter from '../components/shared/SiteFooter.astro';
+import ProofReel from '../components/shared/ProofReel.astro';
+import { site } from '../config/site';
+import { PROFILE_GLYPHS, PLAN_GLYPHS } from '../lib/glyphs';
+import { buildEngineModel, MAP, MAP_W, MAP_H } from '../components/candidate-b/engineModel';
+import type { EmbodimentId } from '../lib/world';
+
+const m = buildEngineModel();
+
+const loop = [
+  { k: 'Perceive', h: 'Sense a partial world.', p: 'Cameras, lidar, inertial and RF return fragments — sparse, noisy, sometimes spoofed.' },
+  { k: 'Build belief', h: 'Know what it knows.', p: 'Observations fuse into a world model that keeps track of where knowledge ends. Hatched cells are unknown, not empty.' },
+  { k: 'Estimate risk', h: 'Price every unknown.', p: 'Terrain, threats and uncertainty become one risk field. The unknown is never treated as free space.' },
+  { k: 'Plan', h: 'Choose with consequences.', p: 'Many feasible trajectories are scored against risk and mission progress. One is selected.' },
+  { k: 'Act', h: 'Commit, safely.', p: 'Control executes the plan inside safety limits that the planner cannot override.' },
+  { k: 'Adapt', h: 'Then do it again.', p: 'New observations update the belief. The loop runs continuously, many times a second.' },
+];
+const stack = ['Sensors', 'Localisation & perception', 'World belief', 'Risk & uncertainty', 'Planning', 'Control', 'Safety'];
+const bodies: { id: EmbodimentId; k: string }[] = [
+  { id: 'ugv', k: 'Ground' },
+  { id: 'uav', k: 'Air' },
+  { id: 'legged', k: 'Legged' },
+  { id: 'maritime', k: 'Maritime' },
+];
+const NODE_X = loop.map((_, i) => 60 + i * 176);
+const COL_X = bodies.map((_, i) => 140 + i * 240);
+
+const known = m.cells.filter((c) => c.known > 0.35);
+const unknown = m.cells.filter((c) => c.known <= 0.35);
+const frontier = m.cells.filter((c) => c.frontier);
+const risky = m.cells.filter((c) => c.risk > 0.16);
+
+const contours = Array.from({ length: 7 }, (_, r) => {
+  const pts = Array.from({ length: 49 }, (_, i) => {
+    const t = (i / 48) * Math.PI * 2;
+    const rad = 16 + r * 17;
+    const rr = rad * (1 + 0.16 * Math.sin(3 * t + r * 0.7) + 0.08 * Math.sin(5 * t - r));
+    return `${i ? 'L' : 'M'}${(250 + Math.cos(t) * rr * 1.5).toFixed(1)} ${(150 + Math.sin(t) * rr).toFixed(1)}`;
+  });
+  return pts.join(' ') + 'Z';
+});
+const ring = loop.map((l, i) => {
+  const a = -Math.PI / 2 + (i / loop.length) * Math.PI * 2;
+  return { ...l, x: 300 + Math.cos(a) * 200, y: 300 + Math.sin(a) * 200, a };
+});
+---
+
+<Base theme="b" title="The Autonomy Machine">
+  <SiteNav />
+  <main>
+    <section class="hero">
+      <div class="hero__copy">
+        <p class="eyebrow">Autonomy for contested environments</p>
+        <h1 class="display">Deterrence through autonomy.</h1>
+        <p class="lede">{site.description}</p>
+      </div>
+      <svg class="hero__loop" viewBox="0 0 600 600" aria-hidden="true">
+        <circle cx="300" cy="300" r="200" class="ln" />
+        <circle cx="300" cy="300" r="200" class="ln ln--pulse" pathLength="100" />
+        {ring.map((n, i) => (
+          <g class="hero__node" style={`--d:${i * 0.45}s`}>
+            <circle cx={n.x} cy={n.y} r="5" />
+            <text x={n.x + Math.cos(n.a) * 22} y={n.y + Math.sin(n.a) * 22 + 4} text-anchor={Math.abs(Math.cos(n.a)) < 0.2 ? 'middle' : Math.cos(n.a) > 0 ? 'start' : 'end'}>{n.k.toUpperCase()}</text>
+          </g>
+        ))}
+        <text x="300" y="296" text-anchor="middle" class="hero__core">AUTONOMY</text>
+        <text x="300" y="316" text-anchor="middle" class="hero__core">ENGINE</text>
+      </svg>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">01 — The shift</p>
+      <h2 class="headline">Autonomy is becoming strategic infrastructure.</h2>
+      <p class="lede">Unmanned systems now shape how forces see, move and deter. What decides outcomes next is what those machines can do when no one is steering — and nothing is certain.</p>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">02 — A different world</p>
+      <h2 class="headline">Most autonomy was built for a world that cooperates.</h2>
+      <div class="worlds">
+        <figure class="world">
+          <svg viewBox="0 0 500 300" aria-hidden="true">
+            {Array.from({ length: 11 }, (_, i) => <path class="grid" d={`M${i * 50} 0V300`} />)}
+            {Array.from({ length: 7 }, (_, i) => <path class="grid" d={`M0 ${i * 50}H500`} />)}
+            <path class="road" d="M0 175H500" />
+            <path class="lane" d="M0 175H500" />
+            <circle class="car" cx="0" cy="175" r="6" />
+            <g class="sat"><circle cx="440" cy="50" r="10" /><path d="M425 50h-14M455 50h14" /></g>
+            <text x="440" y="84" text-anchor="middle">GNSS ✓</text>
+          </svg>
+          <figcaption><span>Structured</span> Mapped · predictable · connected</figcaption>
+        </figure>
+        <figure class="world world--hard">
+          <svg viewBox="0 0 500 300" aria-hidden="true">
+            <defs>
+              <pattern id="hatch-w" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V7" /></pattern>
+            </defs>
+            {contours.map((d) => <path class="contour" d={d} />)}
+            <rect x="300" y="0" width="200" height="300" fill="url(#hatch-w)" class="unk" />
+            <text x="400" y="290" text-anchor="middle">UNMAPPED</text>
+            <circle class="threat" cx="150" cy="240" r="42" />
+            <g class="sat sat--lost"><circle cx="440" cy="50" r="10" /><path d="M425 35l30 30M455 35l-30 30" /></g>
+            <text x="440" y="84" text-anchor="middle">GNSS DENIED</text>
+            <path class="wander" d="M40 270 C 90 200, 140 160, 190 175 S 260 120, 300 95" />
+          </svg>
+          <figcaption><span>Contested</span> Unmapped · adversarial · degraded</figcaption>
+        </figure>
+      </div>
+      <p class="lede">Defense autonomy has to treat risk, uncertainty and incomplete knowledge as first-class inputs to every decision.</p>
+    </section>
+
+    <section class="machine" data-machine>
+      <div class="machine__stage">
+        <div class="machine__captions">
+          <div class="cap" data-cap>
+            <p class="eyebrow">03 — The autonomy engine</p>
+            <h2 class="headline">Watch it assemble.</h2>
+            <p class="lede">The loop that lets a machine act on its own in a world it cannot fully see.</p>
+          </div>
+          {loop.map((l, i) => (
+            <div class="cap" data-cap>
+              <p class="eyebrow"><span class="cap__n">{String(i + 1).padStart(2, '0')}</span> {l.k}</p>
+              <h2 class="headline">{l.h}</h2>
+              <p class="lede">{l.p}</p>
+            </div>
+          ))}
+          <div class="cap" data-cap>
+            <p class="eyebrow">The Autonomy Engine</p>
+            <h2 class="headline">One embodiment‑independent stack.</h2>
+            <ol class="stack mono">{stack.map((s) => <li>{s}</li>)}</ol>
+          </div>
+          <div class="cap" data-cap>
+            <p class="eyebrow">04 — Multi‑embodiment</p>
+            <h2 class="headline">Built for machines, not a machine.</h2>
+            <p class="lede">The reasoning is shared. Dynamics, controllers and what counts as risk are specific to each body.</p>
+          </div>
+          <div class="cap" data-cap>
+            <p class="eyebrow">05 — Orchestration OS</p>
+            <h2 class="headline">From autonomous machines to autonomous teams.</h2>
+            <p class="lede">Mission intent is decomposed, assigned across heterogeneous machines, and re-planned as the situation changes — with humans supervising, not steering.</p>
+          </div>
+        </div>
+
+        <svg class="machine__svg" viewBox="0 0 1000 720" aria-label="Autonomy engine system diagram" role="img">
+          <defs>
+            <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" /></pattern>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" /></marker>
+            <clipPath id="map-clip"><rect x={MAP.x} y={MAP.y} width={MAP_W} height={MAP_H} /></clipPath>
+          </defs>
+
+          <g data-scene1>
+            <g data-l="sensors">
+              {[120, 190, 250, 310, 380].map((y) => <path class="ray" d={`M760 222 L${MAP.x + MAP_W} ${y}`} />)}
+              {[[650, 128, 'EO / IR'], [905, 128, 'LIDAR'], [650, 330, 'INERTIAL'], [905, 330, 'RF / GNSS']].map(([x, y, t]) => (
+                <g class="sensor"><circle cx={x} cy={Number(y) - 4} r="3" /><text x={Number(x) + 9} y={y}>{t}</text></g>
+              ))}
+            </g>
+            <g data-l="machine" transform="translate(664 150) scale(2.4)">
+              <path class="glyph" d={PROFILE_GLYPHS.ugv} />
+            </g>
+
+            <g data-l="frame">
+              <rect class="frame" x={MAP.x} y={MAP.y} width={MAP_W} height={MAP_H} />
+              <text class="tag" x={MAP.x} y={MAP.y - 12}>WORLD BELIEF</text>
+              <text class="tag tag--r" x={MAP.x + MAP_W} y={MAP.y - 12}>{MAP.cols}×{MAP.rows} · 1 CELL = UNKNOWN UNTIL OBSERVED</text>
+            </g>
+            <g data-l="scan">{m.scan.map((p) => <circle class="pt" cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r={p.r.toFixed(2)} />)}</g>
+            <g data-l="known">{known.map((c) => <rect x={c.x + 1} y={c.y + 1} width={MAP.cell - 2} height={MAP.cell - 2} fill={`rgba(236,235,230,${(c.shade * 0.32).toFixed(3)})`} />)}</g>
+            <g data-l="unknown">{unknown.map((c) => <rect x={c.x + 1} y={c.y + 1} width={MAP.cell - 2} height={MAP.cell - 2} fill="url(#hatch)" />)}</g>
+            <g data-l="frontier">{frontier.map((c) => <rect class="fr" x={c.x + 1.5} y={c.y + 1.5} width={MAP.cell - 3} height={MAP.cell - 3} />)}</g>
+            <g data-l="risk">{risky.map((c) => <rect x={c.x + 1} y={c.y + 1} width={MAP.cell - 2} height={MAP.cell - 2} fill={c.riskFill} opacity={Math.min(0.85, Math.max(0, (c.risk - 0.12) / 0.75) * 0.85).toFixed(2)} />)}</g>
+            <g data-l="trail"><path class="trail" d={m.travelled} /></g>
+            <g data-l="plans" clip-path="url(#map-clip)">
+              {m.plans.filter((p) => !p.best).map((p) => <path class="plan" d={p.d} pathLength="1" />)}
+              {m.plans.filter((p) => p.best).map((p) => <path class="plan plan--best" d={p.d} pathLength="1" />)}
+            </g>
+            <g data-l="goal"><circle class="goal" cx={m.goal.x} cy={m.goal.y} r="7" /><text class="tag" x={m.goal.x + 12} y={m.goal.y + 4}>OBJECTIVE</text></g>
+            <g data-l="agent" data-best={JSON.stringify(m.bestPts.map(([x, y]) => [+x.toFixed(1), +y.toFixed(1)]))}>
+              <g data-agent transform={`translate(${m.pose.x} ${m.pose.y}) rotate(${m.pose.deg})`}>
+                <path class="glyph glyph--plan" d={PLAN_GLYPHS.ugv} transform="scale(0.9) translate(-12 -12)" />
+              </g>
+            </g>
+
+            <g data-l="pipeline">
+              {NODE_X.slice(0, -1).map((x, i) => <path class="link" d={`M${x + 10} 580H${NODE_X[i + 1] - 10}`} />)}
+              {loop.map((l, i) => (
+                <g>
+                  <circle class="node" cx={NODE_X[i]} cy="580" r="7" />
+                  <circle class="node node--lit" data-node cx={NODE_X[i]} cy="580" r="7" />
+                  <text class="tag" x={NODE_X[i]} y="555" text-anchor="middle">{String(i + 1).padStart(2, '0')}</text>
+                  <text class="nlabel" x={NODE_X[i]} y="610" text-anchor="middle">{l.k.toUpperCase()}</text>
+                </g>
+              ))}
+              <path class="return" data-l="return" d={`M${NODE_X[5]} 628 C ${NODE_X[5]} 700, ${NODE_X[0]} 700, ${NODE_X[0]} 628`} pathLength="1" marker-end="url(#arrow)" />
+            </g>
+          </g>
+
+          <g data-scene2>
+            <g data-l="intent">
+              <rect class="box box--intent" x="370" y="24" width="260" height="46" />
+              <text class="blabel" x="500" y="52" text-anchor="middle">MISSION INTENT · HUMAN SUPERVISION</text>
+              <path class="wire" d="M500 70V118" marker-end="url(#arrow)" />
+            </g>
+            <g data-l="os">
+              <rect class="box box--os" x="40" y="120" width="920" height="72" />
+              <text class="btitle" x="64" y="152">ORCHESTRATION OS</text>
+              <text class="bsub" x="64" y="174">decompose · assign · coordinate · supervise · re-plan</text>
+              {COL_X.map((x) => (
+                <g>
+                  <path class="wire" d={`M${x - 7} 194V288`} marker-end="url(#arrow)" />
+                  <path class="wire wire--up" d={`M${x + 7} 288V196`} marker-end="url(#arrow)" />
+                  <path class="pulse" d={`M${x - 7} 194V288`} pathLength="1" />
+                  <path class="pulse pulse--up" d={`M${x + 7} 288V196`} pathLength="1" />
+                </g>
+              ))}
+              <text class="tag" x="960" y="240" text-anchor="end">TASKS ↓ · STATE ↑</text>
+            </g>
+            {COL_X.map((x) => (
+              <g data-chip style={`--dx:${500 - x}px`}>
+                <rect class="box box--engine" x={x - 100} y="290" width="200" height="56" />
+                <circle class="mini" cx={x - 74} cy="318" r="9" />
+                <path class="mini-arrow" d={`M${x - 74} 309 a9 9 0 1 1 -8 5`} />
+                <text class="blabel" x={x - 56} y="322">AUTONOMY ENGINE</text>
+              </g>
+            ))}
+            <g data-l="bodies">
+              {COL_X.map((x, i) => (
+                <g>
+                  <path class="wire wire--dim" d={`M${x} 346V362`} />
+                  <rect class="box box--platform" x={x - 100} y="362" width="200" height="34" />
+                  <text class="bsub" x={x} y="384" text-anchor="middle">platform dynamics · control</text>
+                  <g transform={`translate(${x - 90} 420) scale(1.5)`}><path class="glyph" d={PROFILE_GLYPHS[bodies[i].id]} /></g>
+                  <text class="nlabel" x={x} y="545" text-anchor="middle">{bodies[i].k.toUpperCase()}</text>
+                </g>
+              ))}
+              <text class="tag" x="40" y="620">SHARED: REASONING ARCHITECTURE</text>
+              <text class="tag" x="40" y="640">SPECIFIC: DYNAMICS, CONTROLLERS, RISK WEIGHTS</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">06 — In development</p>
+      <h2 class="headline">Running in simulation today.</h2>
+      <p class="lede">Planning, risk and belief outputs from our stack. Placeholder renders until field footage replaces them.</p>
+      <ProofReel layout="row" />
+    </section>
+
+    <section class="block block--close" id="contact">
+      <h2 class="display">Deterrence through autonomy.</h2>
+      <p class="lede">We are working with partners who need machines that keep reasoning when the world stops cooperating.</p>
+      <div class="cta">
+        <a class="btn" href={`mailto:${site.contactEmail}?subject=Partnership`}>Partner with us</a>
+        <a class="btn btn--ghost" href={`mailto:${site.contactEmail}?subject=Careers`}>Build with us</a>
+      </div>
+    </section>
+  </main>
+  <SiteFooter />
+</Base>
+
+<script>
+  import { initMotion, prefersReducedMotion } from '../lib/motion';
+
+  const { gsap } = initMotion();
+  const reduced = prefersReducedMotion();
+  const q = <T extends Element = SVGGElement>(sel: string, root: ParentNode = document) => root.querySelector(sel) as T;
+
+  gsap.utils.toArray<HTMLElement>('.block, .hero__copy').forEach((el) => {
+    gsap.from(el.children, {
+      y: 24, opacity: 0, duration: 0.9, stagger: 0.08, ease: 'power3.out',
+      scrollTrigger: { trigger: el, start: 'top 80%' },
+    });
+  });
+
+  const root = q<HTMLElement>('[data-machine]');
+  const L = (k: string) => q(`[data-l="${k}"]`, root);
+  const caps = gsap.utils.toArray<HTMLElement>('[data-cap]', root);
+  const nodes = gsap.utils.toArray<SVGCircleElement>('[data-node]', root);
+  const chips = gsap.utils.toArray<SVGGElement>('[data-chip]', root);
+  const scene1 = q('[data-scene1]', root);
+  const agent = q('[data-agent]', root);
+  const best: [number, number][] = JSON.parse(L('agent').dataset.best ?? '[]');
+
+  const layers = ['sensors', 'frame', 'scan', 'known', 'unknown', 'frontier', 'risk', 'trail', 'plans', 'goal', 'agent', 'bodies', 'os', 'intent'];
+  gsap.set(layers.map(L), { opacity: 0 });
+  gsap.set([...nodes, ...chips], { opacity: 0 });
+  gsap.set(caps.slice(1), { opacity: 0, y: 20 });
+  gsap.set(L('pipeline'), { opacity: 0.35 });
+  gsap.set(root.querySelectorAll('.plan'), { strokeDashoffset: 1 });
+  gsap.set(L('return'), { strokeDashoffset: 1, opacity: 0 });
+  gsap.set(chips, { x: (_: number, el: Element) => getComputedStyle(el).getPropertyValue('--dx') });
+
+  const tl = gsap.timeline({
+    defaults: { duration: 0.5, ease: 'power2.inOut' },
+    scrollTrigger: { trigger: root, start: 'top top', end: () => `+=${window.innerHeight * 10}`, scrub: reduced ? true : 0.7, pin: '.machine__stage', anticipatePin: 1 },
+  });
+
+  const cap = (i: number, at: number) => {
+    tl.to(caps[i - 1], { opacity: 0, y: -16, duration: 0.15 }, at).to(caps[i], { opacity: 1, y: 0, duration: 0.2 }, at + 0.1);
+  };
+  const node = (i: number, at: number) => tl.to(nodes[i], { opacity: 1, duration: 0.3 }, at);
+
+  // 1 Perceive
+  cap(1, 1); node(0, 1);
+  tl.to(L('pipeline'), { opacity: 1 }, 1).to(L('sensors'), { opacity: 1 }, 1.1).to(L('frame'), { opacity: 1 }, 1.3).to(L('scan'), { opacity: 1 }, 1.4).to(L('agent'), { opacity: 1 }, 1.4);
+  // 2 Build belief
+  cap(2, 2); node(1, 2);
+  tl.to(L('scan'), { opacity: 0.35 }, 2.2).to(L('known'), { opacity: 1 }, 2.2).to(L('unknown'), { opacity: 1 }, 2.4).to(L('frontier'), { opacity: 1 }, 2.6).to(L('trail'), { opacity: 1 }, 2.6).to(L('goal'), { opacity: 1 }, 2.7);
+  // 3 Estimate risk
+  cap(3, 3); node(2, 3);
+  tl.to(L('risk'), { opacity: 1 }, 3.2).to(L('frontier'), { opacity: 0.4 }, 3.2).to(L('sensors'), { opacity: 0.35 }, 3.2);
+  // 4 Plan
+  cap(4, 4); node(3, 4);
+  tl.to(L('plans'), { opacity: 1, duration: 0.1 }, 4.1).to(root.querySelectorAll('.plan:not(.plan--best)'), { strokeDashoffset: 0, stagger: 0.03 }, 4.15).to(root.querySelector('.plan--best'), { strokeDashoffset: 0 }, 4.5);
+  // 5 Act
+  cap(5, 5); node(4, 5);
+  const prog = { t: 0 };
+  const seg = best.map((p, i) => (i ? Math.hypot(p[0] - best[i - 1][0], p[1] - best[i - 1][1]) : 0));
+  const total = seg.reduce((a, b) => a + b, 0);
+  tl.to(root.querySelectorAll('.plan:not(.plan--best)'), { opacity: 0.25 }, 5.1).to(prog, {
+    t: 1, duration: 0.8, ease: 'power1.inOut',
+    onUpdate: () => {
+      let d = prog.t * total * 0.7;
+      let i = 1;
+      while (i < best.length - 1 && d > seg[i]) d -= seg[i++];
+      const [ax, ay] = best[i - 1];
+      const [bx, by] = best[i];
+      const f = Math.min(1, d / (seg[i] || 1));
+      const deg = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
+      agent.setAttribute('transform', `translate(${ax + (bx - ax) * f} ${ay + (by - ay) * f}) rotate(${deg})`);
+    },
+  }, 5.15);
+  // 6 Adapt
+  cap(6, 6); node(5, 6);
+  tl.set(L('return'), { opacity: 1 }, 6.1).to(L('return'), { strokeDashoffset: 0, duration: 0.6 }, 6.1).add(() => root.classList.toggle('is-live', tl.scrollTrigger!.direction > 0), 6.7);
+  // 7 Compress into the engine
+  cap(7, 7);
+  tl.to(scene1, { scale: 0.2, x: 400, y: 260, opacity: 0, svgOrigin: '0 0', duration: 0.7, ease: 'power3.in' }, 7.1).to(chips[1], { opacity: 1, duration: 0.3 }, 7.55);
+  // 8 Embodiments
+  cap(8, 8);
+  tl.to(chips, { opacity: 1, x: 0, stagger: 0.05, duration: 0.6 }, 8.05).to(L('bodies'), { opacity: 1 }, 8.4);
+  // 9 Orchestration
+  cap(9, 9);
+  tl.fromTo(L('os'), { opacity: 0, y: -30 }, { opacity: 1, y: 0 }, 9.1).fromTo(L('intent'), { opacity: 0, y: -20 }, { opacity: 1, y: 0 }, 9.35).to({}, { duration: 0.6 }, 9.6);
+</script>
+
+<style>
+  main { position: relative; }
+  .hero {
+    min-height: 100svh;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    align-items: center;
+    gap: 4vw;
+    padding: 120px var(--pad) 60px;
+  }
+  .hero .display { font-size: clamp(3.2rem, 7.4vw, 7.6rem); line-height: 0.92; letter-spacing: -0.045em; max-width: 9ch; }
+  .hero .lede { margin-top: 1.6em; }
+  .hero__loop { width: 100%; max-width: 620px; justify-self: end; overflow: visible; }
+  .hero__loop .ln { fill: none; stroke: var(--line); stroke-width: 1; }
+  .hero__loop .ln--pulse { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 8 92; animation: orbit 5.4s linear infinite; transform-origin: 300px 300px; transform: rotate(-90deg); }
+  .hero__node circle { fill: var(--bg); stroke: var(--fg-dim); stroke-width: 1.2; animation: blink 5.4s var(--d) infinite; }
+  .hero__node text, .hero__core { font: 500 11px var(--font-mono); letter-spacing: 0.14em; fill: var(--fg-dim); }
+  .hero__core { fill: var(--fg); font-size: 13px; letter-spacing: 0.24em; }
+  @keyframes orbit { to { stroke-dashoffset: -100; } }
+  @keyframes blink { 0%, 100% { fill: var(--bg); stroke: var(--fg-dim); } 4% { fill: var(--accent); stroke: var(--accent); } 14% { fill: var(--bg); stroke: var(--fg-dim); } }
+
+  .block { padding: 18vh var(--pad); max-width: 1440px; margin: 0 auto; }
+  .block .headline { max-width: 18ch; margin: 0.4em 0 0.6em; }
+  .block .lede { max-width: 46ch; }
+
+  .worlds { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin: 8vh 0 6vh; background: var(--line); border: 1px solid var(--line); }
+  .world { margin: 0; background: var(--bg); padding: 28px; }
+  .world svg { width: 100%; display: block; }
+  .world figcaption { font: 12px var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-faint); margin-top: 18px; }
+  .world figcaption span { color: var(--fg); margin-right: 1em; }
+  .world text { font: 10px var(--font-mono); letter-spacing: 0.14em; fill: var(--fg-faint); }
+  .world .grid { stroke: var(--line); }
+  .world .road { stroke: rgba(236, 235, 230, 0.14); stroke-width: 34; }
+  .world .lane { stroke: var(--fg-faint); stroke-dasharray: 10 12; }
+  .world .car { fill: var(--fg); animation: drive 6s linear infinite; }
+  @keyframes drive { to { transform: translateX(500px); } }
+  .world .sat circle, .world .sat path { fill: none; stroke: var(--fg-dim); }
+  .world--hard .sat--lost path { stroke: var(--accent); }
+  .world .contour { fill: none; stroke: rgba(236, 235, 230, 0.22); }
+  .world #hatch-w path, .world .unk { stroke: rgba(236, 235, 230, 0.14); }
+  .world .threat { fill: rgba(255, 91, 20, 0.08); stroke: var(--accent); stroke-dasharray: 3 5; }
+  .world .wander { fill: none; stroke: var(--fg); stroke-width: 1.5; stroke-dasharray: 4 6; }
+  .world--hard figcaption span { color: var(--accent); }
+
+  .machine { position: relative; }
+  .machine__stage { height: 100svh; display: grid; grid-template-columns: minmax(300px, 0.9fr) 2fr; align-items: center; gap: 3vw; padding: 80px var(--pad) 40px; overflow: hidden; }
+  .machine__captions { position: relative; height: 340px; }
+  .cap { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; }
+  .cap .headline { font-size: clamp(1.8rem, 2.8vw, 2.8rem); margin: 0.35em 0 0.5em; max-width: 14ch; }
+  .cap .lede { font-size: 1.02rem; max-width: 36ch; }
+  .cap__n { color: var(--accent); margin-right: 0.6em; }
+  .stack { list-style: none; padding: 0; margin: 0.6em 0 0; display: grid; gap: 0.5em; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-dim); counter-reset: s; }
+  .stack li { counter-increment: s; display: flex; gap: 1em; padding-bottom: 0.5em; border-bottom: 1px solid var(--line); }
+  .stack li::before { content: counter(s, decimal-leading-zero); color: var(--accent); }
+  .machine__svg { width: 100%; max-height: calc(100svh - 120px); overflow: visible; }
+  .machine__svg text { font-family: var(--font-mono); }
+  .tag { font-size: 10px; letter-spacing: 0.14em; fill: var(--fg-faint); }
+  .tag--r { text-anchor: end; }
+  .glyph { fill: none; stroke: var(--fg); stroke-width: 1.1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  .glyph--plan { fill: var(--bg); stroke-width: 1.4; }
+  .ray { stroke: var(--fg-faint); stroke-dasharray: 2 6; animation: flow 1.6s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: 16; } }
+  .sensor circle { fill: var(--accent); }
+  .sensor text { font-size: 10px; letter-spacing: 0.14em; fill: var(--fg-dim); }
+  .frame { fill: rgba(255, 255, 255, 0.015); stroke: var(--line); }
+  .pt { fill: var(--fg); opacity: 0.75; }
+  #hatch path { stroke: rgba(236, 235, 230, 0.16); stroke-width: 1; }
+  .fr { fill: none; stroke: var(--fg-dim); stroke-width: 0.8; stroke-dasharray: 2 2; }
+  .trail { fill: none; stroke: var(--fg-dim); stroke-width: 1.4; stroke-dasharray: 1 4; stroke-linecap: round; }
+  .plan { fill: none; stroke: var(--fg-dim); stroke-width: 1; stroke-dasharray: 1; opacity: 0.8; }
+  .plan--best { stroke: var(--fg); stroke-width: 2.6; opacity: 1; }
+  .goal { fill: none; stroke: var(--fg); stroke-width: 1.2; stroke-dasharray: 3 3; }
+  .link { stroke: var(--line); stroke-width: 1; }
+  .node { fill: var(--bg); stroke: var(--fg-faint); }
+  .node--lit { fill: var(--accent); stroke: var(--accent); }
+  .nlabel { font-size: 11px; letter-spacing: 0.16em; fill: var(--fg-dim); }
+  .return { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 1; }
+  #arrow path { fill: var(--fg-dim); }
+  .is-live .node--lit { animation: lit 2.4s infinite; }
+  @keyframes lit { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .box { fill: var(--bg); stroke: var(--fg-faint); }
+  .box--os { stroke: var(--accent); fill: rgba(255, 91, 20, 0.05); }
+  .box--engine { stroke: var(--fg); }
+  .box--platform { stroke-dasharray: 3 4; }
+  .box--intent { stroke: var(--fg-dim); }
+  .btitle { font-size: 15px; letter-spacing: 0.24em; fill: var(--fg); font-weight: 500; }
+  .blabel { font-size: 11px; letter-spacing: 0.16em; fill: var(--fg); }
+  .bsub { font-size: 10px; letter-spacing: 0.1em; fill: var(--fg-faint); }
+  .wire { stroke: var(--fg-faint); fill: none; }
+  .wire--up { stroke-dasharray: 3 4; }
+  .wire--dim { stroke: var(--line); }
+  .pulse { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 0.12 0.88; animation: down 2.2s linear infinite; }
+  .pulse--up { stroke: var(--fg); animation-delay: -1.1s; }
+  @keyframes down { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  .mini { fill: none; stroke: none; }
+  .mini-arrow { fill: none; stroke: var(--accent); stroke-width: 1.4; }
+
+  .block--close { min-height: 80vh; display: flex; flex-direction: column; justify-content: center; }
+  .block--close .display { font-size: clamp(3rem, 8vw, 8rem); letter-spacing: -0.045em; line-height: 0.92; max-width: 10ch; }
+  .cta { display: flex; gap: 12px; margin-top: 40px; flex-wrap: wrap; }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding-top: 110px; }
+    .hero__loop { max-width: 420px; justify-self: center; }
+    .worlds { grid-template-columns: 1fr; }
+    .machine__stage { grid-template-columns: 1fr; grid-template-rows: auto 1fr; align-items: start; padding-top: 72px; gap: 8px; }
+    .machine__captions { height: 210px; }
+    .cap .headline { font-size: 1.5rem; }
+    .cap .lede { font-size: 0.92rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ray, .pulse, .hero__loop .ln--pulse, .world .car, .hero__node circle { animation: none; }
+  }
+</style>
