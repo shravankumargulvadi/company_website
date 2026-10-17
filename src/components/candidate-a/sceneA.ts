@@ -12,6 +12,7 @@ import {
   poseAt,
   PROFILES,
   riskAt,
+  smoothstep,
   rollout,
   sample,
   type EmbodimentId,
@@ -26,6 +27,7 @@ export interface SceneState {
   belief: number;
   points: number;
   risk: number;
+  field: number;
   plans: number;
   lens: number;
   known: number;
@@ -40,14 +42,44 @@ export interface SceneState {
 }
 
 export const INITIAL_STATE: SceneState = {
-  relief: 1, structured: 0, belief: 0, points: 0, risk: 0, plans: 0, lens: 1, known: 0,
+  relief: 1, structured: 0, belief: 0, points: 0, risk: 0, field: 0, plans: 0, lens: 1, known: 0,
   profile: 0, team: 0, others: 0, dist: 2.6, elev: 0.3, azim: 0.9, focus: 0, dim: 0,
 };
 
 const EXTENT = 10;
 const HSCALE = 0.9;
+const FIELD_AMP = 0.5;
+const FIELD_BASE = 0.3;
 const BG = new THREE.Color('#060708');
 const PROFILE_ORDER: EmbodimentId[] = ['ugv', 'uav', 'legged', 'maritime'];
+
+function boxBlur(src: Float32Array, n: number, r: number) {
+  const tmp = new Float32Array(src.length);
+  const out = new Float32Array(src.length);
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      let a = 0;
+      let c = 0;
+      for (let d = -r; d <= r; d++) {
+        const x = i + d;
+        if (x >= 0 && x < n) (a += src[j * n + x]), c++;
+      }
+      tmp[j * n + i] = a / c;
+    }
+  }
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      let a = 0;
+      let c = 0;
+      for (let d = -r; d <= r; d++) {
+        const y = j + d;
+        if (y >= 0 && y < n) (a += tmp[y * n + i]), c++;
+      }
+      out[j * n + i] = a / c;
+    }
+  }
+  return out;
+}
 
 const toXZ = (u: number, v: number) => [(u - 0.5) * EXTENT, (v - 0.5) * EXTENT] as const;
 
@@ -55,14 +87,19 @@ const toXZ = (u: number, v: number) => [(u - 0.5) * EXTENT, (v - 0.5) * EXTENT] 
 
 const terrainVert = /* glsl */ `
   attribute float aHeight;
+  attribute vec4 aHaz;
   uniform float uRelief;
   uniform float uHScale;
+  uniform float uFieldMix;
   varying vec3 vWorld;
   varying float vH;
+  varying vec4 vHaz;
   void main() {
     vec3 p = position;
-    p.y = aHeight * uHScale * uRelief;
+    float base = aHeight * uHScale * uRelief;
+    p.y = mix(base, aHeight * uHScale * ${FIELD_BASE.toFixed(2)} + aHaz.w * ${FIELD_AMP.toFixed(2)}, uFieldMix);
     vH = aHeight;
+    vHaz = aHaz;
     vec4 wp = modelMatrix * vec4(p, 1.0);
     vWorld = wp.xyz;
     gl_Position = projectionMatrix * viewMatrix * wp;
@@ -78,8 +115,10 @@ const terrainFrag = /* glsl */ `
   uniform vec2 uMouse, uRobot;
   uniform vec3 uBg;
   uniform float uHScale, uRelief;
+  uniform float uFieldMix;
   varying vec3 vWorld;
   varying float vH;
+  varying vec4 vHaz;
 
   float aaLine(float x, float w) {
     float d = abs(fract(x - 0.5) - 0.5) / max(fwidth(x), 1e-4);
@@ -151,6 +190,20 @@ const terrainFrag = /* glsl */ `
     bel = mix(bel, bel * 0.6 + rc * 0.7, rAmt * 0.85);
     float tRing = aaLine(threat * 6.0, 0.0) * smoothstep(0.08, 0.25, threat);
     bel += vec3(1.0, 0.4, 0.2) * tRing * 0.4 * uRisk * uProfile.w;
+
+    /* --- risk field: slope / obstacle / negative obstacle, raised as cost --- */
+    if (uFieldMix > 0.001) {
+      vec3 Nf = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
+      if (Nf.y < 0.0) Nf = -Nf;
+      float df = clamp(dot(Nf, normalize(vec3(-0.55, 0.55, -0.35))), 0.0, 1.0);
+      float ws = vHaz.x, wo = vHaz.y * 1.6, wn = vHaz.z * 1.6, rt = vHaz.w;
+      vec3 tc = (vec3(1.0, 0.66, 0.16) * ws + vec3(1.0, 0.2, 0.14) * wo + vec3(0.72, 0.36, 1.0) * wn) / (ws + wo + wn + 1e-3);
+      float I = smoothstep(0.04, 0.55, rt);
+      vec3 fc = vec3(0.045, 0.04, 0.036) * (0.4 + 1.2 * df);
+      fc = mix(fc, tc * (0.3 + 0.9 * df), I);
+      fc += vec3(0.9, 0.86, 0.8) * aaLine(rt * 8.0, 0.0) * 0.14 * smoothstep(0.03, 0.12, rt);
+      bel = mix(bel, fc + bel * 0.25, uFieldMix);
+    }
 
     /* --- compose: reality vs machine view, cursor lens --- */
     float lensRing = uLens * (1.0 - clamp(abs(ld - uLensR) - 0.5, 0.0, 1.0));
@@ -340,6 +393,8 @@ export class EyesScene {
   private mouse = new THREE.Vector2(-1e4, -1e4);
   private lastPointer = -100;
   private time = 0;
+  private hazH!: Float32Array;
+  private fieldAmt = 0;
   private profile: RiskProfile = { ...PROFILES.ugv };
   readonly goal = { u: 0.82, v: 0.24 };
   activeEmbodiment: EmbodimentId = 'ugv';
@@ -349,7 +404,7 @@ export class EyesScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, opts.lowPower ? 1.25 : 1.75));
     this.renderer.setClearColor(BG, 1);
 
-    const world = (this.world = createWorld({ size: 192, seed: 11, waterFraction: 0.1 }));
+    const world = (this.world = createWorld({ size: 192, seed: 11, waterFraction: 0.1, hazards: true }));
     const S = world.size;
 
     /* field texture */
@@ -380,6 +435,21 @@ export class EyesScene {
       aH[i] = Math.max(sample(world.height, S, u, v), world.waterLevel);
     }
     geo.setAttribute('aHeight', new THREE.BufferAttribute(aH, 1));
+    const slopeR = boxBlur(world.slope, S, 3).map((x) => smoothstep(0.3, 0.85, x));
+    this.hazH = new Float32Array(S * S);
+    for (let k = 0; k < S * S; k++) {
+      this.hazH[k] = 1 - (1 - slopeR[k]) * (1 - world.obstacle[k]) * (1 - world.negative[k]);
+    }
+    const aHaz = new Float32Array(pos.count * 4);
+    for (let i = 0; i < pos.count; i++) {
+      const u = pos.getX(i) / EXTENT + 0.5;
+      const v = pos.getZ(i) / EXTENT + 0.5;
+      aHaz[i * 4] = sample(slopeR, S, u, v);
+      aHaz[i * 4 + 1] = sample(world.obstacle, S, u, v);
+      aHaz[i * 4 + 2] = sample(world.negative, S, u, v);
+      aHaz[i * 4 + 3] = sample(this.hazH, S, u, v);
+    }
+    geo.setAttribute('aHaz', new THREE.BufferAttribute(aHaz, 4));
 
     const common = {
       uField: { value: fieldTex },
@@ -401,6 +471,7 @@ export class EyesScene {
         uStructured: { value: 0 },
         uBelief: { value: 0 },
         uRisk: { value: 0 },
+        uFieldMix: { value: 0 },
         uKnown: { value: 0 },
         uDim: { value: 0 },
         uUnknownW: { value: 0.55 },
@@ -571,7 +642,11 @@ export class EyesScene {
 
   groundY(u: number, v: number) {
     const w = this.world;
-    return Math.max(sample(w.height, w.size, u, v), w.waterLevel) * HSCALE * (this.terrainMat?.uniforms.uRelief.value ?? 1);
+    const h = Math.max(sample(w.height, w.size, u, v), w.waterLevel);
+    const base = h * HSCALE * (this.terrainMat?.uniforms.uRelief.value ?? 1);
+    if (!this.fieldAmt) return base;
+    const fy = h * HSCALE * FIELD_BASE + sample(this.hazH, w.size, u, v) * FIELD_AMP;
+    return base + (fy - base) * this.fieldAmt;
   }
 
   setPointer(x: number, y: number) {
@@ -619,6 +694,8 @@ export class EyesScene {
     U.uStructured.value = s.structured;
     U.uBelief.value = s.belief;
     U.uRisk.value = s.risk;
+    U.uFieldMix.value = s.field;
+    this.fieldAmt = s.field;
     U.uKnown.value = s.known;
     U.uDim.value = s.dim;
     U.uTeam.value = s.team;

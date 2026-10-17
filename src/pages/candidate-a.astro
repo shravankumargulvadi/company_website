@@ -9,7 +9,7 @@ const stages = [
   { k: 'Reality', h: 'The world as it is.', p: 'Uneven, partially hidden, and contested.' },
   { k: 'Perception', h: 'What the sensors return.', p: 'Sparse, noisy, limited by range and line of sight.' },
   { k: 'Belief', h: 'What the machine believes.', p: 'A model of the world — including where knowledge runs out.' },
-  { k: 'Risk', h: 'What could go wrong.', p: 'Terrain, threats and the unknown, weighed together.' },
+  { k: 'Risk', h: 'What could go wrong.', p: 'Slope, obstacles and drops become a field of cost. The higher the ground, the more it costs to cross.' },
   { k: 'Decision', h: 'What it chooses to do.', p: 'Many possible paths. One taken, with the consequences understood.' },
 ];
 const beats = [
@@ -87,6 +87,13 @@ const bodies = [
                 <span class="rail__k mono">{String(i + 1).padStart(2, '0')} {s.k}</span>
                 <span class="rail__h">{s.h}</span>
                 <span class="rail__p">{s.p}</span>
+                {s.k === 'Risk' && (
+                  <span class="rail__p rail__legend mono">
+                    <span><i style="--c: #ffa829"></i>Slope</span>
+                    <span><i style="--c: #ff3324"></i>Obstacle</span>
+                    <span><i style="--c: #b85cff"></i>Negative obstacle</span>
+                  </span>
+                )}
               </li>
             ))}
           </ol>
@@ -201,7 +208,7 @@ const bodies = [
 
   /* Scene keyframes anchored to section scroll progress (0 = section top at viewport top). */
   const KEYS: Key[] = [
-    { sec: 'hero', at: 0, s: { relief: 1, structured: 0, belief: 0, points: 0, risk: 0, plans: 0, lens: 1, known: 0, profile: 0, team: 0, others: 0, dist: 3.4, elev: 0.36, azim: 0.9, focus: 0, dim: 0 } },
+    { sec: 'hero', at: 0, s: { relief: 1, structured: 0, belief: 0, points: 0, risk: 0, field: 0, plans: 0, lens: 1, known: 0, profile: 0, team: 0, others: 0, dist: 3.4, elev: 0.36, azim: 0.9, focus: 0, dim: 0 } },
     { sec: 'hero', at: 0.6, s: { lens: 1, dist: 3.8 } },
     { sec: 'shift', at: 0, s: { lens: 0, dist: 4.2, elev: 0.42, azim: 1.5 } },
     { sec: 'shift', at: 0.8, s: { dist: 5.2, elev: 0.62 } },
@@ -213,11 +220,11 @@ const bodies = [
     { sec: 'reason', at: 0.26, s: { points: 1, dim: 0.8, dist: 2.7 } },
     { sec: 'reason', at: 0.36, s: { belief: 0 } },
     { sec: 'reason', at: 0.48, s: { belief: 1, known: 0.15, points: 0.35, dim: 0.8, dist: 3.4, elev: 0.62 } },
-    { sec: 'reason', at: 0.56, s: { risk: 0 } },
-    { sec: 'reason', at: 0.68, s: { risk: 1, known: 0.3, elev: 0.66 } },
+    { sec: 'reason', at: 0.56, s: { risk: 0, field: 0 } },
+    { sec: 'reason', at: 0.68, s: { risk: 1, field: 1, points: 0, known: 0.3, elev: 0.66 } },
     { sec: 'reason', at: 0.76, s: { plans: 0 } },
     { sec: 'reason', at: 0.88, s: { plans: 1, dist: 3, elev: 0.6, azim: 2.4 } },
-    { sec: 'engine', at: 0, s: { belief: 1, risk: 0.8, plans: 1, points: 0.4, dist: 2.8, elev: 0.5, azim: 2.8 } },
+    { sec: 'engine', at: 0, s: { belief: 1, field: 0, risk: 0.8, plans: 1, points: 0.4, dist: 2.8, elev: 0.5, azim: 2.8 } },
     { sec: 'engine', at: 0.9, s: { azim: 3.3 } },
     { sec: 'bodies', at: 0, s: { others: 1, focus: 1, plans: 0, points: 0, risk: 1, known: 0.5, dist: 4.2, elev: 0.85, profile: 0 } },
     { sec: 'bodies', at: 0.15, s: { profile: 0 } },
@@ -593,6 +600,24 @@ const bodies = [
   }
   .rail li.is-active {
     opacity: 1;
+  }
+  .rail__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 10px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rail__legend i {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 7px;
+    border-radius: 2px;
+    background: var(--c);
+    vertical-align: -1px;
   }
   .rail__k {
     font-size: 11px;

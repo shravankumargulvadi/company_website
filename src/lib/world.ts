@@ -15,6 +15,8 @@ export interface World {
   size: number;
   height: Float32Array; // [-1, 1]
   slope: Float32Array; // [0, 1]
+  obstacle: Float32Array; // [0, 1] positive obstacles (rocks, rubble)
+  negative: Float32Array; // [0, 1] negative obstacles (holes, ditches)
   water: Float32Array; // [0, 1]
   threat: Float32Array; // [0, 1]
   threats: Threat[];
@@ -22,6 +24,7 @@ export interface World {
 }
 
 export interface WorldOptions {
+  hazards?: boolean;
   size?: number;
   seed?: number;
   waterLevel?: number;
@@ -84,6 +87,51 @@ export function createWorld(opts: WorldOptions = {}): World {
   const sRef = smax * 0.55;
   for (let k = 0; k < N; k++) slope[k] = Math.min(1, slope[k] / sRef) ** 1.6;
 
+  /* discrete hazards, stamped after slope so each risk type stays separable */
+  const obstacle = new Float32Array(N);
+  const negative = new Float32Array(N);
+  if (opts.hazards) {
+    const rnd = mulberry32(seed * 31 + 5);
+    const stamp = (u: number, v: number, r: number, out: Float32Array, dh: number) => {
+      const R = Math.ceil(3 * r * (size - 1));
+      const ci = Math.round(u * (size - 1));
+      const cj = Math.round(v * (size - 1));
+      for (let j = Math.max(0, cj - R); j <= Math.min(size - 1, cj + R); j++) {
+        for (let i = Math.max(0, ci - R); i <= Math.min(size - 1, ci + R); i++) {
+          const g = Math.exp(-((i / (size - 1) - u) ** 2 + (j / (size - 1) - v) ** 2) / (2 * r * r));
+          const k = j * size + i;
+          out[k] = Math.max(out[k], g);
+          height[k] += dh * g;
+        }
+      }
+    };
+    const spot = () => {
+      for (let n = 0; n < 20; n++) {
+        const u = 0.06 + rnd() * 0.88;
+        const v = 0.06 + rnd() * 0.88;
+        if (sample(height, size, u, v) > waterLevel + 0.12) return [u, v] as const;
+      }
+      return null;
+    };
+    for (let n = 0; n < 110; n++) {
+      const p = spot();
+      if (p) stamp(p[0], p[1], 0.005 + rnd() * 0.008, obstacle, 0.06);
+    }
+    for (let n = 0; n < 22; n++) {
+      const p = spot();
+      if (p) stamp(p[0], p[1], 0.006 + rnd() * 0.01, negative, -0.09);
+    }
+    for (let n = 0; n < 4; n++) {
+      const p = spot();
+      if (!p) continue;
+      const a = rnd() * Math.PI;
+      const len = 0.08 + rnd() * 0.1;
+      for (let t = 0; t <= 1; t += 0.04) {
+        stamp(p[0] + Math.cos(a) * len * (t - 0.5), p[1] + Math.sin(a) * len * (t - 0.5), 0.005, negative, -0.03);
+      }
+    }
+  }
+
   const water = new Float32Array(N);
   const threat = new Float32Array(N);
   for (let j = 0; j < size; j++) {
@@ -102,7 +150,7 @@ export function createWorld(opts: WorldOptions = {}): World {
     }
   }
 
-  return { size, height, slope, water, threat, threats, waterLevel };
+  return { size, height, slope, obstacle, negative, water, threat, threats, waterLevel };
 }
 
 export function smoothstep(a: number, b: number, x: number) {
@@ -182,7 +230,7 @@ export function riskAt(
   p: RiskProfile = PROFILES.ugv,
 ): number {
   if (u < 0 || v < 0 || u > 1 || v > 1) return 1;
-  const s = sample(w.slope, w.size, u, v);
+  const s = Math.max(sample(w.slope, w.size, u, v), sample(w.obstacle, w.size, u, v), sample(w.negative, w.size, u, v));
   const wa = sample(w.water, w.size, u, v);
   const th = sample(w.threat, w.size, u, v);
   const terrain = Math.min(1, p.slope * s + p.water * wa + p.land * (1 - wa));

@@ -57,6 +57,8 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
   - *Close to production:* the scroll and scene architecture, the shader pipeline, lens interaction, fallbacks and copy structure.
   - *Before launch:* tune on real GPUs (only tested here on software WebGL), consider a photographic or video hero layer behind the "reality" state, and do a mobile art-direction pass.
 
+**Candidate A, risk stage (04):** the terrain lifts into a cost field (the `field` state in `src/components/candidate-a/sceneA.ts`). Height is the combined risk, and colour shows the type: slope (amber), obstacles (red), negative obstacles such as holes and ditches (violet). The hazards come from `createWorld({ hazards: true })` in `src/lib/world.ts` and also feed `riskAt`, so the planned path really routes around them.
+
 ### Candidate A — Underground chapter
 
 Chapter 03, after Reality → Decision. Inspired by the reference risk-estimation capture in `reference_material/` (it is **not** embedded or shipped).
