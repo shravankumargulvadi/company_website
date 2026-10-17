@@ -12,7 +12,7 @@ export interface ProofItem {
   caption: string;
   video?: string;
   poster?: string;
-  placeholder: SimVariant;
+  placeholder: SimVariant | 'passage';
 }
 
 export const proofItems: ProofItem[] = [
@@ -23,10 +23,10 @@ export const proofItems: ProofItem[] = [
     placeholder: 'plan',
   },
   {
-    id: 'risk',
-    label: 'Spatial risk field',
-    caption: 'Risk estimated from terrain, hazards and what has not yet been observed.',
-    placeholder: 'risk',
+    id: 'passage',
+    label: 'Risk estimation, confined passage',
+    caption: '2.5D elevation and risk map built from range data as a ground vehicle drives an unmapped passage.',
+    placeholder: 'passage',
   },
   {
     id: 'belief',

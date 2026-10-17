@@ -57,6 +57,15 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
   - *Close to production:* the scroll and scene architecture, the shader pipeline, lens interaction, fallbacks and copy structure.
   - *Before launch:* tune on real GPUs (only tested here on software WebGL), consider a photographic or video hero layer behind the "reality" state, and do a mobile art-direction pass.
 
+### Candidate A — Underground chapter
+
+Chapter 03, after Reality → Decision. Inspired by the reference risk-estimation capture in `reference_material/` (it is **not** embedded or shipped).
+
+- **Story:** no GPS, no light, no map. The machine drives an unmapped passage and prices what it sees. Anything it hasn't seen is never treated as free.
+- **Interaction:** a pinned split screen. Scrolling drives the machine forward. Left: the machine's headlit camera view. Right: the 2.5D elevation/risk map built from its range sensor. Cells rise as they are observed. Cells seen from far away stay more expensive. Unobserved space stays hatched. The HUD shows distance travelled, % mapped and mean uncertainty.
+- **Implementation:** `src/lib/passage.ts` holds a deterministic passage model: a loop, a chamber, a dead-end branch, rubble, a ledge, a 360° range sensor with occlusion, and per-cell first/best observation. `src/components/candidate-a/deepScene.ts` draws two viewports from one WebGL context, with the map as instanced cells. `src/lib/passageMap2d.ts` provides the top-down Canvas fallback and also powers the "confined passage" proof placeholder.
+- **Placeholder vs production:** the geometry is procedural. A real capture can replace the proof placeholder via `src/config/proof.ts`.
+
 ## Candidate B — The Autonomy Machine
 
 **Files:** `src/pages/candidate-b.astro`, `src/components/candidate-b/engineModel.ts`

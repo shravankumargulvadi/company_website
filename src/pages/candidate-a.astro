@@ -12,6 +12,12 @@ const stages = [
   { k: 'Risk', h: 'What could go wrong.', p: 'Terrain, threats and the unknown, weighed together.' },
   { k: 'Decision', h: 'What it chooses to do.', p: 'Many possible paths. One taken, with the consequences understood.' },
 ];
+const beats = [
+  { h: 'No GPS. No light. No map.', p: 'Underground, under canopy, inside structures — where remote control fails first.' },
+  { h: 'Every cell it sees gets a height — and a price.', p: 'Range returns become a 2.5D elevation map. Slope, steps and rubble become risk.' },
+  { h: 'Glimpsed from afar, it stays expensive.', p: 'Confidence grows as the machine gets closer. Risk only falls when the evidence earns it.' },
+  { h: "What it hasn't seen is never free.", p: 'Unobserved space is priced, not assumed open — so the path stays where the evidence is.' },
+];
 const loop = ['Perceive', 'Build belief', 'Estimate risk', 'Plan', 'Act', 'Adapt'];
 const bodies = [
   { id: 'ugv', k: 'Ground', p: 'Slope, soft terrain and water dominate.' },
@@ -88,10 +94,40 @@ const bodies = [
       </div>
     </section>
 
+    <section class="deep" data-sec="deep" style="--h: 560vh">
+      <div class="deep__sticky">
+        <canvas id="a-deep" class="deep__gl" aria-label="The machine's camera view of a dark passage beside the 2.5D risk map it builds while driving" role="img"></canvas>
+        <canvas id="a-deep-2d" class="deep__gl" hidden></canvas>
+        <div class="deep__shade" aria-hidden="true"></div>
+        <p class="deep__tag deep__tag--l mono">Machine view · camera</p>
+        <p class="deep__tag deep__tag--r mono">Belief · 2.5D risk map</p>
+        <div class="deep__copy">
+          <p class="eyebrow">03 — Underground</p>
+          <ol class="deep__beats">
+            {beats.map((b, i) => (
+              <li data-beat={i}>
+                <h2 class="headline">{b.h}</h2>
+                <p class="lede">{b.p}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div class="deep__hud mono">
+          <span><b data-hud="dist">0</b> m travelled</span>
+          <span><b data-hud="mapped">0</b>% of passage mapped</span>
+          <span><b data-hud="unc">–</b> mean uncertainty</span>
+        </div>
+        <div class="deep__legend mono" aria-hidden="true">
+          <span class="deep__ramp"></span><span>Low → high risk</span>
+          <span class="deep__unk"></span><span>Not yet observed</span>
+        </div>
+      </div>
+    </section>
+
     <section class="sec" data-sec="engine" style="--h: 240vh">
       <div class="sticky">
         <div class="panel panel--right" data-fade>
-          <p class="eyebrow">03 — The Autonomy Engine</p>
+          <p class="eyebrow">04 — The Autonomy Engine</p>
           <h2 class="headline">One loop.<br />Uncertainty carried through every step.</h2>
           <p class="lede">A platform-independent autonomy stack, from raw sensing to safe action.</p>
           <ol class="loop mono">
@@ -104,7 +140,7 @@ const bodies = [
     <section class="sec" data-sec="bodies" style="--h: 340vh">
       <div class="sticky">
         <div class="panel panel--left" data-fade>
-          <p class="eyebrow">04 — Multi-embodiment</p>
+          <p class="eyebrow">05 — Multi-embodiment</p>
           <h2 class="headline">Built for machines,<br /><em>not a machine.</em></h2>
           <p class="lede">The same reasoning runs across platforms. What counts as risk changes with the body.</p>
           <ul class="bodies" data-bodies>
@@ -122,7 +158,7 @@ const bodies = [
     <section class="sec" data-sec="team" style="--h: 280vh">
       <div class="sticky">
         <div class="panel panel--right" data-fade>
-          <p class="eyebrow">05 — Orchestration OS</p>
+          <p class="eyebrow">06 — Orchestration OS</p>
           <h2 class="headline">From autonomous machines to autonomous teams.</h2>
           <p class="lede">An orchestration layer turns human intent into coordinated action across heterogeneous machines — sharing what each one learns and replanning as the mission unfolds.</p>
           <p class="flow mono"><span>Intent</span><i></i><span>Orchestration</span><i></i><span>Machines</span><i class="back"></i></p>
@@ -132,7 +168,7 @@ const bodies = [
 
     <section class="proof-sec" data-sec="proof">
       <div class="proof-head">
-        <p class="eyebrow">06 — In development</p>
+        <p class="eyebrow">07 — In development</p>
         <h2 class="headline">Early technology.<br />Real foundations.</h2>
         <p class="lede">Our autonomy stack is in active development in simulation and on ground platforms. These views come from that work.</p>
       </div>
@@ -156,7 +192,7 @@ const bodies = [
 </Base>
 
 <script>
-  import { initMotion, hasWebGL, prefersReducedMotion, range, smooth, clamp } from '../lib/motion';
+  import { initMotion, hasWebGL, prefersReducedMotion, range, smooth, clamp, whenNear, visibleLoop, fitCanvas } from '../lib/motion';
   import type { SceneState } from '../components/candidate-a/sceneA';
 
   const { gsap } = initMotion();
@@ -245,7 +281,7 @@ const bodies = [
   const railItems = [...rail.querySelectorAll<HTMLElement>('[data-stage]')];
   const railFill = document.querySelector<HTMLElement>('[data-rail-fill]')!;
   const bodyItems = [...document.querySelectorAll<HTMLElement>('[data-body]')];
-  const proofSec = sections.get('proof')!;
+  const coverers = [sections.get('proof')!, sections.get('deep')!];
   const STAGE_AT = [0, 0.2, 0.4, 0.6, 0.8];
 
   function sectionProgress(name: string) {
@@ -264,6 +300,59 @@ const bodies = [
     const bi = Math.round(clamp(s.profile, 0, 3));
     bodyItems.forEach((li, i) => li.classList.toggle('is-active', i === bi));
   }
+
+  /* Underground chapter: its own canvas, booted when the section approaches. */
+  const deepSec = sections.get('deep')!;
+  whenNear(deepSec, async () => {
+    const { createPassage, passageStats } = await import('../lib/passage');
+    const lowPower = window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
+    const P = createPassage({ res: lowPower ? 160 : 224 });
+    const beatEls = [...deepSec.querySelectorAll<HTMLElement>('[data-beat]')];
+    const hud = (k: string) => deepSec.querySelector<HTMLElement>(`[data-hud="${k}"]`)!;
+    const [hDist, hMapped, hUnc] = [hud('dist'), hud('mapped'), hud('unc')];
+    const target = () => range(sectionProgress('deep'), 0.04, 0.94) * (P.length - 0.05);
+    let s = target();
+    let lastStat = -1;
+    const ui = (now: number) => {
+      const bi = Math.min(beatEls.length - 1, Math.floor(sectionProgress('deep') * beatEls.length));
+      beatEls.forEach((el, i) => el.classList.toggle('is-active', i === bi));
+      if (now - lastStat < 0.2) return;
+      lastStat = now;
+      const st = passageStats(P, s);
+      hDist.textContent = s.toFixed(1);
+      hMapped.textContent = String(Math.round(st.mapped * 100));
+      hUnc.textContent = st.meanUnc.toFixed(2);
+    };
+    const step = (dt: number) => (s += (target() - s) * (reduced ? 1 : 1 - Math.exp(-dt * 5)));
+
+    const gl = document.getElementById('a-deep') as HTMLCanvasElement;
+    if (hasWebGL()) {
+      const { DeepScene } = await import('../components/candidate-a/deepScene');
+      const scene = new DeepScene(gl, P, { lowPower });
+      scene.resize();
+      window.addEventListener('resize', () => scene.resize());
+      gl.classList.add('is-ready');
+      visibleLoop(deepSec, (t, dt) => {
+        step(dt);
+        scene.frame(dt, s);
+        ui(t);
+      });
+    } else {
+      const { PassageMap2D } = await import('../lib/passageMap2d');
+      const flat = document.getElementById('a-deep-2d') as HTMLCanvasElement;
+      gl.hidden = true;
+      flat.hidden = false;
+      deepSec.classList.add('is-flat');
+      const view = new PassageMap2D(flat, P);
+      flat.classList.add('is-ready');
+      visibleLoop(deepSec, (t, dt) => {
+        fitCanvas(flat, 1.5);
+        step(dt);
+        view.draw(s, t);
+        ui(t);
+      });
+    }
+  }, '900px');
 
   /* Scene boot: lazy so hero text paints first. */
   const canvas = document.getElementById('a-gl') as HTMLCanvasElement;
@@ -314,8 +403,10 @@ const bodies = [
         cur[kk] += (target[kk] - cur[kk]) * k;
       }
       updateUI(cur);
-      const pr = proofSec.getBoundingClientRect();
-      const covered = pr.top <= 0 && pr.bottom >= window.innerHeight;
+      const covered = coverers.some((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top <= 0 && r.bottom >= window.innerHeight;
+      });
       if (!covered && !document.hidden) {
         scene.frame(dt, cur);
         if (first) {
@@ -619,6 +710,129 @@ const bodies = [
     border-radius: 0 8px 8px 0;
   }
 
+  /* underground */
+  .deep {
+    position: relative;
+    height: var(--h);
+    background: #050506;
+  }
+  .deep__sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .deep__gl {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1.2s var(--ease);
+  }
+  .deep__gl.is-ready {
+    opacity: 1;
+  }
+  .deep__shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, transparent calc(50% - 0.5px), var(--line) calc(50% - 0.5px), var(--line) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+      linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%),
+      radial-gradient(ellipse 30% 60% at 25% 50%, transparent 55%, rgba(5, 5, 6, 0.55) 100%);
+  }
+  .deep__tag {
+    position: absolute;
+    top: 92px;
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .deep__tag--l {
+    left: var(--pad);
+  }
+  .deep__tag--r {
+    left: calc(50% + var(--pad));
+  }
+  .deep__copy {
+    position: absolute;
+    left: var(--pad);
+    bottom: 9vh;
+    width: min(440px, calc(50% - 2 * var(--pad)));
+    display: grid;
+    gap: 18px;
+  }
+  .deep__beats {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+  }
+  .deep__beats li {
+    grid-area: 1 / 1;
+    display: grid;
+    gap: 14px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+  }
+  .deep__beats li.is-active {
+    opacity: 1;
+    transform: none;
+  }
+  .deep__beats .headline {
+    font-size: clamp(30px, 3.2vw, 46px);
+  }
+  .deep__hud {
+    position: absolute;
+    top: 120px;
+    left: calc(50% + var(--pad));
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--fg-dim);
+  }
+  .deep__hud b {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .deep__legend {
+    position: absolute;
+    right: var(--pad);
+    bottom: 9vh;
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 10px 12px;
+    align-items: center;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--fg-dim);
+  }
+  .deep__ramp,
+  .deep__unk {
+    width: 72px;
+    height: 8px;
+  }
+  .deep__ramp {
+    background: linear-gradient(90deg, rgb(58, 72, 82), rgb(168, 98, 36), rgb(255, 124, 52));
+  }
+  .deep__unk {
+    background: repeating-linear-gradient(135deg, rgba(168, 98, 36, 0.45) 0 1px, #0b0c0e 1px 5px);
+    outline: 1px solid var(--line);
+  }
+  .deep.is-flat .deep__tag--l,
+  .deep.is-flat .deep__tag--r {
+    display: none;
+  }
+  .deep.is-flat .deep__shade {
+    background: linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%);
+  }
+
   /* proof */
   .proof-sec {
     position: relative;
@@ -663,6 +877,29 @@ const bodies = [
     }
     .reason {
       padding: 12vh 0 8vh;
+    }
+    .deep__shade {
+      background:
+        linear-gradient(0deg, transparent calc(50% - 0.5px), var(--line) calc(50% - 0.5px), var(--line) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+        linear-gradient(0deg, rgba(5, 5, 6, 0.95) 0%, rgba(5, 5, 6, 0) 40%);
+    }
+    .deep__tag--r,
+    .deep__hud {
+      left: var(--pad);
+    }
+    .deep__tag--r {
+      top: calc(50% + 16px);
+    }
+    .deep__hud {
+      top: calc(50% + 40px);
+      gap: 12px;
+    }
+    .deep__copy {
+      width: calc(100% - 2 * var(--pad));
+      bottom: 5vh;
+    }
+    .deep__legend {
+      display: none;
     }
     .rail li.is-active .rail__h {
       font-size: 24px;
