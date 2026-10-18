@@ -2,7 +2,6 @@
 import Base from '../layouts/Base.astro';
 import SiteNav from '../components/shared/SiteNav.astro';
 import SiteFooter from '../components/shared/SiteFooter.astro';
-import ProofReel from '../components/shared/ProofReel.astro';
 import { site } from '../config/site';
 
 const stages = [
@@ -23,6 +22,11 @@ const airBeats = [
   { h: 'An emitter on the planned route.', p: 'It picks up radar ahead. Exposure becomes risk.' },
   { h: 'It changes course.', p: 'The other canyon keeps terrain between it and the radar.' },
   { h: 'Same Fieldcore OS. Different body.', p: 'On the ground or in the air, it weighs terrain, the unknown and the adversary.' },
+];
+const deterSteps = [
+  { h: 'Autonomous capabilities at scale.', p: 'Fieldcore OS on every machine. Shunya OS across the force.' },
+  { h: 'Defensive and offensive superiority.', p: 'Machines that see, decide and act where people cannot, on defence or in attack.' },
+  { h: 'Deterrence through denial and punishment.', p: 'An adversary who cannot win, and cannot avoid the cost, does not start.' },
 ];
 const forceCaps = [
   { e: '04 — Fieldcore OS', h: 'Fieldcore OS. One autonomy, many bodies.', p: 'The autonomy that runs on every machine: ground, air, legged and maritime, each with its own sense of what is risky.' },
@@ -142,27 +146,44 @@ const forceCaps = [
       </div>
     </section>
 
-    <section class="deep" data-sec="deep" style="--h: 680vh">
+    <section class="sec" data-sec="deter" style="--h: 320vh">
+      <div class="sticky deter__sticky">
+        <div class="deter">
+          <p class="eyebrow">08 — Why it matters</p>
+          <ol class="deter__steps">
+            {deterSteps.map((d, i) => (
+              <li data-step={i}>
+                <span class="deter__n mono">{String(i + 1).padStart(2, '0')}</span>
+                <h2 class="headline">{d.h}</h2>
+                <p class="lede">{d.p}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="deep" data-sec="deep" data-tab="air" style="--h: 680vh">
       <div class="deep__sticky">
         <canvas id="a-deep" class="deep__gl" aria-label="The machine's camera view of a dark passage beside the 2.5D risk map it builds while driving" role="img"></canvas>
         <canvas id="a-deep-2d" class="deep__gl" hidden></canvas>
         <canvas id="a-air" class="deep__gl" aria-label="Chase view of a fixed-wing machine flying a canyon beside its risk map" role="img" hidden></canvas>
         <div class="deep__shade" aria-hidden="true"></div>
-        <p class="deep__tag deep__tag--l mono">Machine view · camera</p>
         <p class="deep__tag deep__tag--r mono">Belief · risk map</p>
         <p class="deep__route deep__route--direct mono" data-route="direct" aria-hidden="true">Direct · <b data-len="direct">–</b> m · drop · high risk</p>
         <p class="deep__air deep__route--direct mono" data-air="radar" aria-hidden="true">EW · radar detected</p>
         <p class="deep__air deep__route--direct mono" data-air="planned" aria-hidden="true">Planned · exposed · high risk</p>
         <p class="deep__air deep__route--detour mono" data-air="detour" aria-hidden="true">Re-plan · terrain-masked</p>
         <p class="deep__route deep__route--detour mono" data-route="detour" aria-hidden="true">Detour · <b data-len="detour">–</b> m · low risk</p>
+        <div class="deep__switch mono" role="tablist" aria-label="Fieldcore OS demos">
+          <span class="deep__badge">In progress</span>
+          <button type="button" role="tab" data-tab="air" aria-selected="true">Air · fixed-wing</button>
+          <button type="button" role="tab" data-tab="ground" aria-selected="false">Ground · underground</button>
+        </div>
         <div class="deep__copy">
-          <p class="eyebrow">08 — Fieldcore OS</p>
-          <div class="deep__tabs mono" role="tablist" aria-label="Fieldcore OS examples">
-            <button type="button" role="tab" data-tab="ground" aria-selected="true">Ground · underground</button>
-            <button type="button" role="tab" data-tab="air" aria-selected="false">Air · canyon</button>
-          </div>
+          <p class="eyebrow">09 — Fieldcore OS</p>
           {[['ground', beats], ['air', airBeats]].map(([k, list]) => (
-            <ol class="deep__beats" data-beats={k as string} hidden={k === 'air'}>
+            <ol class="deep__beats" data-beats={k as string} hidden={k === 'ground'}>
               {(list as typeof beats).map((b, i) => (
                 <li data-beat={i}>
                   <h2 class="headline">{b.h}</h2>
@@ -182,15 +203,6 @@ const forceCaps = [
           <span class="deep__unk"></span><span>Not yet observed</span>
         </div>
       </div>
-    </section>
-
-    <section class="proof-sec" data-sec="proof">
-      <div class="proof-head">
-        <p class="eyebrow">09 — In development</p>
-        <h2 class="headline">Early technology.<br />Real foundations.</h2>
-        <p class="lede">Our autonomy stack is in active development in simulation and on ground platforms. These views come from that work.</p>
-      </div>
-      <ProofReel layout="feature" />
     </section>
 
     <section class="sec" data-sec="close" id="contact" style="--h: 130vh">
@@ -305,7 +317,7 @@ const forceCaps = [
   const rail = document.querySelector<HTMLElement>('[data-rail]')!;
   const railItems = [...rail.querySelectorAll<HTMLElement>('[data-stage]')];
   const railFill = document.querySelector<HTMLElement>('[data-rail-fill]')!;
-  const coverers = [sections.get('proof')!, sections.get('deep')!];
+  const coverers = [sections.get('deep')!];
   let forceOpacity = 0;
   const STAGE_AT = [0, 0.2, 0.4, 0.6, 0.8];
 
@@ -339,6 +351,15 @@ const forceCaps = [
   }
   updateForceFade();
   window.addEventListener('scroll', updateForceFade, { passive: true });
+
+  /* Deterrence framing: the three steps light up in turn */
+  const deterSteps = [...sections.get('deter')!.querySelectorAll<HTMLElement>('[data-step]')];
+  const updateDeter = () => {
+    const p = sectionProgress('deter');
+    deterSteps.forEach((el, i) => el.classList.toggle('is-on', p >= 0.08 + i * 0.27));
+  };
+  updateDeter();
+  window.addEventListener('scroll', updateDeter, { passive: true });
   whenNear(sections.get('link')!, async () => {
     const [{ ForceScene, forceStage, stateAt: forceAt }, { createWorld }] = await Promise.all([
       import('../components/candidate-c/sceneC'),
@@ -399,7 +420,7 @@ const forceCaps = [
     const { createPassage, passageStats } = await import('../lib/passage');
     const lowPower = window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
     const P = createPassage({ res: lowPower ? 160 : 224 });
-    let tab: 'ground' | 'air' = 'ground';
+    let tab: 'ground' | 'air' = 'air';
     const beatLists = Object.fromEntries(
       [...deepSec.querySelectorAll<HTMLElement>('[data-beats]')].map((ol) => [ol.dataset.beats!, ol]),
     );
@@ -419,7 +440,7 @@ const forceCaps = [
        reverse out, then the detour */
     const target = () => {
       const p = sectionProgress('deep');
-      if (p < 0.2) return range(p, 0.03, 0.2) * sJ;
+      if (p < 0.2) return 2 + range(p, 0.03, 0.2) * (sJ - 2);
       if (p < 0.32) return sJ + smooth(range(p, 0.2, 0.32)) * (P.probe - sJ);
       if (p < 0.44) return P.probe;
       if (p < 0.54) return P.probe + smooth(range(p, 0.44, 0.54)) * (P.back - P.probe);
@@ -474,7 +495,11 @@ const forceCaps = [
         const p = sectionProgress('deep');
         return { detect: smooth(range(p, 0.27, 0.34)), decided: smooth(range(p, 0.42, 0.49)) };
       };
-      const setTab = async (t: 'ground' | 'air') => {
+      const setTab = async (t: 'ground' | 'air', restart = false) => {
+        if (restart && t !== tab) {
+          window.scrollTo({ top: deepSec.getBoundingClientRect().top + window.scrollY + 2, behavior: 'auto' });
+          s = target();
+        }
         tab = t;
         deepSec.dataset.tab = t;
         tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
@@ -483,8 +508,8 @@ const forceCaps = [
           const { AirScene } = await import('../components/candidate-a/airScene');
           air = new AirScene(airCanvas, { lowPower });
           window.addEventListener('resize', () => air?.resize());
-          sa = airTarget();
         }
+        if (restart || t === 'air') sa = airTarget();
         airCanvas.hidden = t !== 'air';
         gl.hidden = t === 'air';
         if (t === 'air') {
@@ -492,7 +517,8 @@ const forceCaps = [
           airCanvas.classList.add('is-ready');
         }
       };
-      tabs.forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab as 'ground' | 'air')));
+      tabs.forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab as 'ground' | 'air', true)));
+      setTab('air');
 
       visibleLoop(deepSec, (t, dt) => {
         if (tab === 'air' && air) {
@@ -522,6 +548,9 @@ const forceCaps = [
       gl.hidden = true;
       flat.hidden = false;
       deepSec.classList.add('is-flat');
+      tab = 'ground';
+      deepSec.dataset.tab = 'ground';
+      Object.entries(beatLists).forEach(([k, ol]) => (ol.hidden = k !== 'ground'));
       const view = new PassageMap2D(flat, P);
       flat.classList.add('is-ready');
       visibleLoop(deepSec, (t, dt) => {
@@ -954,9 +983,6 @@ const forceCaps = [
     text-transform: uppercase;
     color: var(--fg-faint);
   }
-  .deep__tag--l {
-    left: var(--pad);
-  }
   .deep__tag--r {
     left: calc(50% + var(--pad));
   }
@@ -1067,7 +1093,7 @@ const forceCaps = [
     color: var(--fg);
   }
   .deep.is-flat .deep__route,
-  .deep.is-flat .deep__tabs,
+  .deep.is-flat .deep__switch,
   .deep__air,
   .deep[data-tab='air'] .deep__route,
   .deep[data-tab='air'] .deep__hud,
@@ -1107,37 +1133,106 @@ const forceCaps = [
   .deep__beats[hidden] {
     display: none;
   }
-  .deep__tabs {
-    display: flex;
-    gap: 6px;
-    margin: 4px 0 18px;
-    pointer-events: auto;
-    position: relative;
-    z-index: 2;
+  .deep__gl[hidden] {
+    display: none;
   }
-  .deep__tabs button {
-    font: inherit;
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--fg-dim);
-    background: rgba(5, 5, 6, 0.6);
+  .deep__tag--r {
+    top: 150px;
+  }
+  .deep__hud {
+    top: 178px;
+  }
+  .deep__switch {
+    position: absolute;
+    top: 78px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    background: rgba(5, 5, 6, 0.82);
     border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 8px 14px;
+    pointer-events: auto;
+    white-space: nowrap;
+  }
+  .deep__badge {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 0 10px 0 12px;
+  }
+  .deep__switch button {
+    font: inherit;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 10px 18px;
     cursor: pointer;
     transition: color 0.3s, border-color 0.3s, background 0.3s;
   }
-  .deep__tabs button[aria-selected='true'] {
+  .deep__switch button:hover {
+    color: var(--fg);
+    border-color: var(--fg-dim);
+  }
+  .deep__switch button[aria-selected='true'] {
     color: var(--bg);
     background: var(--fg);
     border-color: var(--fg);
   }
-  .deep__tabs button:focus-visible {
+  .deep__switch button:focus-visible {
     outline: 1px solid var(--signal);
     outline-offset: 2px;
   }
-  .deep.is-flat .deep__tag--l,
+  .deter__sticky {
+    justify-content: center;
+    background: radial-gradient(70% 70% at 50% 50%, rgba(6, 7, 8, 0.82) 0%, rgba(6, 7, 8, 0.55) 100%);
+  }
+  .deter {
+    display: grid;
+    gap: 28px;
+    max-width: 880px;
+    width: 100%;
+  }
+  .deter__steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 26px;
+  }
+  .deter__steps li {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    column-gap: 18px;
+    opacity: 0.18;
+    transform: translateY(10px);
+    transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+  }
+  .deter__steps li:global(.is-on) {
+    opacity: 1;
+    transform: none;
+  }
+  .deter__n {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+    padding-top: 0.9em;
+    grid-row: span 2;
+  }
+  .deter__steps .headline {
+    font-size: clamp(26px, 3.2vw, 46px);
+  }
+  .deter__steps .lede {
+    margin-top: 6px;
+  }
   .deep.is-flat .deep__tag--r {
     display: none;
   }
@@ -1145,20 +1240,6 @@ const forceCaps = [
     background: linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%);
   }
 
-  /* proof */
-  .proof-sec {
-    position: relative;
-    background: var(--bg);
-    padding: 22vh var(--pad) 18vh;
-    display: grid;
-    gap: 8vh;
-    min-height: 100vh;
-  }
-  .proof-head {
-    display: grid;
-    gap: 20px;
-    max-width: 640px;
-  }
   .ctas {
     display: flex;
     gap: 12px;
