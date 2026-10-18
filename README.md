@@ -52,17 +52,18 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
   1. Hero, the shift, a different world.
   2. **Reality → Perception → Belief → Risk → Decision** on one 3D terrain with a ground vehicle. At *Risk* the terrain lifts into a cost field: height is the combined risk, colour the source (terrain amber, ambiguous sensing violet, electronic warfare red). These fields also feed `riskAt`, so the planned path really avoids them.
   3. **03 Connected:** the vehicle drives to its objective and stops, a comms link arcs from it towards the Shunya OS node, and the camera rises to straight top-down.
-  4. **04–07, bird's-eye force chapter:** once the 3D camera is top-down, a fixed Canvas 2D layer (Candidate C's `ForceScene`, run on A's world with the vehicle at the same spot and scale) cross-fades in and keeps zooming out: multi-embodiment (one Autonomy Engine, many bodies), autonomous teams, human–machine teaming, and **Shunya OS**, the intelligence layer (swarm orchestration, AI-assisted mission planning, fleet management).
-  5. **08 Underground:** see below.
+  4. **04–07, bird's-eye force chapter:** once the 3D camera is top-down, a fixed Canvas 2D layer (Candidate C's `ForceScene`, run on A's world with the vehicle at the same spot and scale) cross-fades in and keeps zooming out: **Fieldcore OS** (the autonomy on every machine, many bodies), autonomous teams, human–machine teaming, and **Shunya OS**, the mission intelligence layer above it (swarm orchestration, AI-assisted mission planning, fleet management).
+  5. **08 Fieldcore OS:** two tabs, see below.
   6. In development (proof reel), closing CTA.
-- **Implementation:** vanilla Three.js with one terrain mesh and a custom shader driven by scroll keyframes (`KEYS` → `SceneState`, including `halt`, `comm` and `bev` for the handoff). `worldA.ts` holds the shared world options, goal and Shunya OS node so the 3D and 2D views line up. If WebGL is unavailable, a Canvas 2D fallback is used.
+- **Implementation:** vanilla Three.js with one terrain mesh and a custom shader driven by scroll keyframes (`KEYS` → `SceneState`, including `comm` and `bev` for the handoff; the lead vehicle's progress `drive` is tied linearly to scroll so it arrives at the goal smoothly). `worldA.ts` holds the shared world options, goal and Shunya OS node so the 3D and 2D views line up. If WebGL is unavailable, a Canvas 2D fallback is used.
 - **Placeholder vs production-ready:** procedural terrain, line-art machines and proof renders are placeholders; the scroll/scene architecture, handoff and fallbacks are close to production. Tune on real GPUs and do a mobile art-direction pass before launch.
 
-### Candidate A — Underground chapter
+### Candidate A — Fieldcore OS chapter (Ground / Air tabs)
 
 Inspired by the reference risk-estimation capture in `reference_material/` (it is **not** embedded or shipped).
 
-- **Story:** no GPS, no light, no map. The machine reaches a fork. The direct branch is short, straight and in plain sight, but high risk. It weighs both and takes the counterintuitive long way round, which is more than twice the distance at a fraction of the risk.
+- **Ground tab:** no GPS, no light, no map. A chase camera follows the rover to a fork. It starts down the short direct branch, sees a drop (only visible up close), reverses out and takes the long, low-risk detour.
+- **Air tab:** `src/components/candidate-a/airScene.ts`. A fixed-wing machine flies low through a canyon, detects a radar (electronic warfare risk) covering its planned branch, and re-plans into the other canyon, keeping terrain between itself and the emitter.
 - **Interaction:** a pinned split screen. Scrolling drives the machine to the fork, holds while the camera looks down the direct branch and both routes are drawn on the map with their lengths, then drives the detour. Left: headlit camera view. Right: risk map built from what it has seen; unobserved space stays hatched.
 - **Implementation:** `src/lib/passage.ts` is a deterministic passage model (entry tunnel, fork, a direct branch with a drop and rubble, a winding detour, goal chamber, range sensor with occlusion, per-cell first/best observation). `deepScene.ts` draws both viewports from one WebGL context. `passageMap2d.ts` is the Canvas fallback and the "confined passage" proof placeholder.
 
