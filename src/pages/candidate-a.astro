@@ -19,10 +19,10 @@ const beats = [
   { h: 'Unknown is not the same as safe.', p: 'It commits only where the evidence supports it, and still completes the mission.' },
 ];
 const forceCaps = [
-  { e: '04 — Multi-embodiment', h: 'One Autonomy Engine. Many bodies.', p: 'Ground, air, legged and maritime machines run the same autonomy, each with its own sense of what is risky.' },
+  { e: '04 — Fieldcore OS', h: 'Fieldcore OS. One autonomy, many bodies.', p: 'The autonomy that runs on every machine: ground, air, legged and maritime, each with its own sense of what is risky.' },
   { e: '05 — Autonomous teams', h: 'Machines that share what they know.', p: 'One picture of the world, built together. Tasks go to the machine best placed to carry them out.' },
   { e: '06 — Human–machine teaming', h: 'Humans set intent. Machines carry it out.', p: 'Operators supervise many machines at once and stay in command of the decisions that matter.' },
-  { e: '07 — Shunya OS', h: 'Shunya OS. The intelligence layer.', p: 'Orchestrates heterogeneous swarms, AI-assisted mission planning and fleet management, re-planning as the mission unfolds.' },
+  { e: '07 — Shunya OS', h: 'Shunya OS. The mission intelligence layer.', p: 'Above Fieldcore: orchestrating heterogeneous swarms, AI-assisted mission planning and fleet management, re-planning as the mission unfolds.' },
 ];
 ---
 
@@ -146,7 +146,7 @@ const forceCaps = [
         <p class="deep__route deep__route--direct mono" data-route="direct" aria-hidden="true">Direct · <b data-len="direct">–</b> m · high risk</p>
         <p class="deep__route deep__route--detour mono" data-route="detour" aria-hidden="true">Detour · <b data-len="detour">–</b> m · low risk</p>
         <div class="deep__copy">
-          <p class="eyebrow">08 — Underground</p>
+          <p class="eyebrow">08 — Fieldcore OS</p>
           <ol class="deep__beats">
             {beats.map((b, i) => (
               <li data-beat={i}>
@@ -204,7 +204,7 @@ const forceCaps = [
 
   /* Scene keyframes anchored to section scroll progress (0 = section top at viewport top). */
   const KEYS: Key[] = [
-    { sec: 'hero', at: 0, s: { relief: 1, structured: 0, belief: 0, points: 0, risk: 0, field: 0, plans: 0, lens: 1, known: 0, profile: 0, team: 0, others: 0, dist: 3.4, elev: 0.36, azim: 0.9, focus: 0, dim: 0, halt: 0, comm: 0, bev: 0 } },
+    { sec: 'hero', at: 0, s: { relief: 1, structured: 0, belief: 0, points: 0, risk: 0, field: 0, plans: 0, lens: 1, known: 0, profile: 0, team: 0, others: 0, dist: 3.4, elev: 0.36, azim: 0.9, focus: 0, dim: 0, comm: 0, bev: 0 } },
     { sec: 'hero', at: 0.6, s: { lens: 1, dist: 3.8 } },
     { sec: 'shift', at: 0, s: { lens: 0, dist: 4.2, elev: 0.42, azim: 1.5 } },
     { sec: 'shift', at: 0.8, s: { dist: 5.2, elev: 0.62 } },
@@ -220,20 +220,26 @@ const forceCaps = [
     { sec: 'reason', at: 0.68, s: { risk: 1, field: 1, points: 0, known: 0.3, elev: 0.66 } },
     { sec: 'reason', at: 0.76, s: { plans: 0 } },
     { sec: 'reason', at: 0.88, s: { plans: 1, dist: 3, elev: 0.6, azim: 2.4 } },
-    { sec: 'link', at: 0, s: { halt: 0, comm: 0 } },
-    { sec: 'link', at: 0.22, s: { halt: 1, plans: 0, field: 0, risk: 0, points: 0, belief: 0, dim: 0, dist: 3.2, elev: 0.75 } },
+    { sec: 'link', at: 0, s: { comm: 0 } },
+    { sec: 'link', at: 0.22, s: { plans: 0, field: 0, risk: 0, points: 0, belief: 0, dim: 0, dist: 3.2, elev: 0.75 } },
     { sec: 'link', at: 0.4, s: { comm: 1 } },
     { sec: 'link', at: 0.72, s: { bev: 1, dist: A_LINK_DIST, elev: 1.5, azim: Math.PI / 2 } },
     { sec: 'force', at: 0.1, s: {} },
-    { sec: 'close', at: 0, s: { halt: 0, comm: 0, bev: 0, known: 0, team: 0, others: 0, focus: 0, belief: 0, risk: 0, plans: 0, points: 0, dim: 0, lens: 1, dist: 3, elev: 0.22, azim: 5.2 } },
+    { sec: 'close', at: 0, s: { comm: 0, bev: 0, known: 0, team: 0, others: 0, focus: 0, belief: 0, risk: 0, plans: 0, points: 0, dim: 0, lens: 1, dist: 3, elev: 0.22, azim: 5.2 } },
   ];
 
   const sections = new Map<string, HTMLElement>();
   document.querySelectorAll<HTMLElement>('[data-sec]').forEach((el) => sections.set(el.dataset.sec!, el));
 
   let anchors: { y: number; s: SceneState }[] = [];
+  /* The lead vehicle's progress to its goal is tied linearly to scroll, from the top of the
+     page to the moment it stops in "Connected", so it never has to rush to catch up. */
+  let driveEnd = 1;
+  const driveAt = (y: number) => clamp(y / driveEnd);
   function layoutKeys() {
     const vh = window.innerHeight;
+    const link = sections.get('link')!;
+    driveEnd = Math.max(1, link.getBoundingClientRect().top + window.scrollY + 0.22 * Math.max(0, link.offsetHeight - vh));
     let acc = { ...KEYS[0].s } as SceneState;
     anchors = KEYS.map((k) => {
       const el = sections.get(k.sec)!;
@@ -245,6 +251,10 @@ const forceCaps = [
   }
 
   function stateAt(y: number): SceneState {
+    return { ...keyState(y), drive: driveAt(y) };
+  }
+
+  function keyState(y: number): SceneState {
     if (y <= anchors[0].y) return anchors[0].s;
     for (let i = 1; i < anchors.length; i++) {
       const a = anchors[i - 1];

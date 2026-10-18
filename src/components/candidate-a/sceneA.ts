@@ -40,14 +40,14 @@ export interface SceneState {
   azim: number;
   focus: number;
   dim: number;
-  halt: number;
+  drive: number;
   comm: number;
   bev: number;
 }
 
 export const INITIAL_STATE: SceneState = {
   relief: 1, structured: 0, belief: 0, points: 0, risk: 0, field: 0, plans: 0, lens: 1, known: 0,
-  profile: 0, team: 0, others: 0, dist: 2.6, elev: 0.3, azim: 0.9, focus: 0, dim: 0, halt: 0, comm: 0, bev: 0,
+  profile: 0, team: 0, others: 0, dist: 2.6, elev: 0.3, azim: 0.9, focus: 0, dim: 0, drive: 0, comm: 0, bev: 0,
 };
 
 const EXTENT = A_EXTENT;
@@ -751,17 +751,8 @@ export class EyesScene {
       this.mouse.y += (ty - this.mouse.y) * k;
     }
 
-    /* main vehicle: drives its loop, or heads to the goal and stops */
-    const period = this.mainPath.length * 0.42;
-    if (s.halt > 0.02) {
-      const gap = (this.stopPhase - this.mainPhase + 1) % 1;
-      const step = (dt / period) * (1 + 8 * s.halt);
-      /* arrived (or a rounding hair past the stop): stay put instead of looping again */
-      if (gap <= step || gap > 1 - 1e-3) this.mainPhase = this.stopPhase;
-      else this.mainPhase = (this.mainPhase + step) % 1;
-    } else {
-      this.mainPhase = (this.mainPhase + dt / period) % 1;
-    }
+    /* main vehicle: its progress to the goal follows the scroll */
+    this.mainPhase = Math.min(1, Math.max(0, s.drive)) * this.stopPhase;
 
     /* agents */
     const decay = Math.exp(-dt * 0.02);
