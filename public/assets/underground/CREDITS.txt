@@ -1,4 +1,0 @@
-Rock textures from Poly Haven (https://polyhaven.com), CC0.
-- wall_*  : "Rock Face" (rock_face), Greg Zaal / Dario Barresi, 2.4 m tile
-- floor_* : "Rocky Trail" (rocky_trail), Amal Kumar, 2 m tile
-Diffuse maps converted to grayscale and recompressed.

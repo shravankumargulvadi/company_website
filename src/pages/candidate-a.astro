@@ -16,7 +16,7 @@ const beats = [
   { h: 'No GPS. No light. No map.', p: 'Underground, under canopy, inside structures — where remote control fails first.' },
   { h: 'Every cell it sees gets a height — and a price.', p: 'Range returns become a 2.5D elevation map. Slope, steps and rubble become risk.' },
   { h: 'Glimpsed from afar, it stays expensive.', p: 'Confidence grows as the machine gets closer. Risk only falls when the evidence earns it.' },
-  { h: 'Unknown is not the same as safe.', p: 'The flat green plane is ground no sensor has touched. The planner treats it as risk until range data says otherwise.' },
+  { h: "What it hasn't seen is never free.", p: 'Unobserved space is priced, not assumed open — so the path stays where the evidence is.' },
 ];
 const loop = ['Perceive', 'Build belief', 'Estimate risk', 'Plan', 'Act', 'Adapt'];
 const bodies = [
@@ -106,8 +106,8 @@ const bodies = [
         <canvas id="a-deep" class="deep__gl" aria-label="The machine's camera view of a dark passage beside the 2.5D risk map it builds while driving" role="img"></canvas>
         <canvas id="a-deep-2d" class="deep__gl" hidden></canvas>
         <div class="deep__shade" aria-hidden="true"></div>
-        <p class="deep__tag deep__tag--l mono">Rover · chase camera</p>
-        <p class="deep__tag deep__tag--r mono">Belief · 2.5D elevation &amp; risk map</p>
+        <p class="deep__tag deep__tag--l mono">Machine view · camera</p>
+        <p class="deep__tag deep__tag--r mono">Belief · 2.5D risk map</p>
         <div class="deep__copy">
           <p class="eyebrow">03 — Underground</p>
           <ol class="deep__beats">
@@ -764,8 +764,8 @@ const bodies = [
     pointer-events: none;
     background:
       linear-gradient(90deg, transparent calc(50% - 0.5px), var(--line) calc(50% - 0.5px), var(--line) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-      linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%) 0 0 / 50% 100% no-repeat,
-      radial-gradient(ellipse 60% 60% at 50% 50%, transparent 55%, rgba(5, 5, 6, 0.55) 100%) 0 0 / 50% 100% no-repeat;
+      linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%),
+      radial-gradient(ellipse 30% 60% at 25% 50%, transparent 55%, rgba(5, 5, 6, 0.55) 100%);
   }
   .deep__tag {
     position: absolute;
@@ -837,8 +837,6 @@ const bodies = [
     font-size: 11px;
     letter-spacing: 0.08em;
     color: var(--fg-dim);
-    padding: 10px 12px;
-    background: rgba(5, 5, 6, 0.72);
   }
   .deep__ramp,
   .deep__unk {
@@ -846,10 +844,10 @@ const bodies = [
     height: 8px;
   }
   .deep__ramp {
-    background: linear-gradient(90deg, hsl(120 90% 45%), hsl(180 90% 45%), hsl(240 90% 58%), hsl(300 90% 52%), hsl(360 90% 50%));
+    background: linear-gradient(90deg, rgb(58, 72, 82), rgb(168, 98, 36), rgb(255, 124, 52));
   }
   .deep__unk {
-    background: rgb(26, 199, 26);
+    background: repeating-linear-gradient(135deg, rgba(168, 98, 36, 0.45) 0 1px, #0b0c0e 1px 5px);
     outline: 1px solid var(--line);
   }
   .deep.is-flat .deep__tag--l,
