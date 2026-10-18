@@ -58,6 +58,8 @@ const BG = [8, 10, 11];
 
 export interface ForceOptions {
   lowPower?: boolean;
+  /** Blend the map boundary into the background instead of drawing an AO frame. */
+  softEdges?: boolean;
   /** Use this world instead of Candidate C's default. */
   world?: World;
   /** Start pose for the lead machine. */
@@ -79,6 +81,7 @@ export class ForceScene {
   private riskImg: HTMLCanvasElement;
   private riskDetail: HTMLCanvasElement;
   private fogImg: HTMLCanvasElement;
+  private edgeVeil?: HTMLCanvasElement;
   private fogData: ImageData;
   private know = new KnowledgeMap(128);
   private hero: Pose;
@@ -96,6 +99,14 @@ export class ForceScene {
 
   constructor(private canvas: HTMLCanvasElement, opts: ForceOptions = {}) {
     this.ctx = canvas.getContext('2d')!;
+    if (opts.softEdges) {
+      // Bake the feather once; composite it over terrain, risk and fog together.
+      this.edgeVeil = this.paint(256, 0, 0, 1, (u, v) => {
+        const fade = smoothstep(0.005, 0.14, Math.min(u, 1 - u))
+          * smoothstep(0.005, 0.14, Math.min(v, 1 - v));
+        return [...BG, (1 - fade) * 255];
+      });
+    }
     this.world = opts.world ?? createWorld({ size: opts.lowPower ? 160 : 256, seed: 41, waterFraction: 0.1 });
     if (opts.hub) this.hub = opts.hub;
     const w = this.world;
@@ -311,9 +322,11 @@ export class ForceScene {
       ctx.globalAlpha = 1;
     }
 
-    // Area of operations frame (visible once zoomed out past the map edge)
+    if (this.edgeVeil) ctx.drawImage(this.edgeVeil, X(0), Y(0), K, K);
+
+    // Candidate C retains its area-of-operations frame; A uses the soft boundary.
     const edge = smoothstep(0.75, 1.0, s.z);
-    if (edge > 0.01) {
+    if (!this.edgeVeil && edge > 0.01) {
       ctx.strokeStyle = `rgba(235,233,226,${0.22 * edge})`;
       ctx.lineWidth = 1;
       ctx.strokeRect(X(0), Y(0), K, K);
