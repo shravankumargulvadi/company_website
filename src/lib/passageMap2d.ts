@@ -27,7 +27,7 @@ export class PassageMap2D {
     this.hatch = this.ctx.createPattern(h, 'repeat');
   }
 
-  draw(s: number, time = 0) {
+  draw(s: number, time = 0, compare = 0) {
     const { ctx, P } = this;
     const W = this.canvas.width;
     const Hc = this.canvas.height;
@@ -67,6 +67,23 @@ export class PassageMap2D {
     this.buf.getContext('2d')!.putImageData(this.img, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(this.buf, ox, oy, size, size);
+
+    if (compare > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = compare;
+      ctx.lineWidth = Math.max(1.5, sc * 0.09);
+      ctx.setLineDash([sc * 0.4, sc * 0.25]);
+      ctx.strokeStyle = '#ff4a2e';
+      ctx.beginPath();
+      P.direct.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.z)) : ctx.moveTo(X(p.x), Y(p.z))));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(168, 230, 255, 0.7)';
+      ctx.beginPath();
+      for (let i = Math.round(P.junction / P.ds); i < P.path.length; i += 2) ctx.lineTo(X(P.path[i].x), Y(P.path[i].z));
+      ctx.stroke();
+      ctx.restore();
+    }
 
     const pose = poseAtS(P, s);
     const idx = Math.min(P.path.length - 1, Math.floor(s / P.ds));

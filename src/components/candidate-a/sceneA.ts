@@ -20,6 +20,7 @@ import {
   type RiskProfile,
   type World,
 } from '../../lib/world';
+import { A_EXTENT, A_GOAL, A_HUB, A_WORLD } from './worldA';
 
 export interface SceneState {
   relief: number;
@@ -39,14 +40,17 @@ export interface SceneState {
   azim: number;
   focus: number;
   dim: number;
+  halt: number;
+  comm: number;
+  bev: number;
 }
 
 export const INITIAL_STATE: SceneState = {
   relief: 1, structured: 0, belief: 0, points: 0, risk: 0, field: 0, plans: 0, lens: 1, known: 0,
-  profile: 0, team: 0, others: 0, dist: 2.6, elev: 0.3, azim: 0.9, focus: 0, dim: 0,
+  profile: 0, team: 0, others: 0, dist: 2.6, elev: 0.3, azim: 0.9, focus: 0, dim: 0, halt: 0, comm: 0, bev: 0,
 };
 
-const EXTENT = 10;
+const EXTENT = A_EXTENT;
 const HSCALE = 0.9;
 const FIELD_AMP = 0.5;
 const FIELD_BASE = 0.3;
@@ -191,13 +195,13 @@ const terrainFrag = /* glsl */ `
     float tRing = aaLine(threat * 6.0, 0.0) * smoothstep(0.08, 0.25, threat);
     bel += vec3(1.0, 0.4, 0.2) * tRing * 0.4 * uRisk * uProfile.w;
 
-    /* --- risk field: slope / obstacle / negative obstacle, raised as cost --- */
+    /* --- risk field: terrain / ambiguous sensing / electronic warfare, raised as cost --- */
     if (uFieldMix > 0.001) {
       vec3 Nf = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
       if (Nf.y < 0.0) Nf = -Nf;
       float df = clamp(dot(Nf, normalize(vec3(-0.55, 0.55, -0.35))), 0.0, 1.0);
-      float ws = vHaz.x, wo = vHaz.y * 1.6, wn = vHaz.z * 1.6, rt = vHaz.w;
-      vec3 tc = (vec3(1.0, 0.66, 0.16) * ws + vec3(1.0, 0.2, 0.14) * wo + vec3(0.72, 0.36, 1.0) * wn) / (ws + wo + wn + 1e-3);
+      float wt = vHaz.x, wa = vHaz.y * 1.9, we = vHaz.z * 0.9, rt = vHaz.w;
+      vec3 tc = (vec3(1.0, 0.66, 0.16) * wt + vec3(0.62, 0.45, 1.0) * wa + vec3(1.0, 0.22, 0.16) * we) / (wt + wa + we + 1e-3);
       float I = smoothstep(0.04, 0.55, rt);
       vec3 fc = vec3(0.045, 0.04, 0.036) * (0.4 + 1.2 * df);
       fc = mix(fc, tc * (0.3 + 0.9 * df), I);
@@ -396,7 +400,13 @@ export class EyesScene {
   private hazH!: Float32Array;
   private fieldAmt = 0;
   private profile: RiskProfile = { ...PROFILES.ugv };
-  readonly goal = { u: 0.82, v: 0.24 };
+  readonly goal = A_GOAL;
+  private mainPhase = 0;
+  private stopPhase = 0.5;
+  private comm: THREE.Line;
+  private commPos = new Float32Array(48 * 3);
+  private commPulses: THREE.Points;
+  private commPulsePos = new Float32Array(5 * 3);
   activeEmbodiment: EmbodimentId = 'ugv';
 
   constructor(private canvas: HTMLCanvasElement, opts: { lowPower?: boolean } = {}) {
@@ -404,7 +414,7 @@ export class EyesScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, opts.lowPower ? 1.25 : 1.75));
     this.renderer.setClearColor(BG, 1);
 
-    const world = (this.world = createWorld({ size: 192, seed: 11, waterFraction: 0.1, hazards: true }));
+    const world = (this.world = createWorld(A_WORLD));
     const S = world.size;
 
     /* field texture */
@@ -436,17 +446,20 @@ export class EyesScene {
     }
     geo.setAttribute('aHeight', new THREE.BufferAttribute(aH, 1));
     const slopeR = boxBlur(world.slope, S, 3).map((x) => smoothstep(0.3, 0.85, x));
+    /* risk sources: terrain, ambiguous sensing, electronic warfare */
+    const terrainR = new Float32Array(S * S);
     this.hazH = new Float32Array(S * S);
     for (let k = 0; k < S * S; k++) {
-      this.hazH[k] = 1 - (1 - slopeR[k]) * (1 - world.obstacle[k]) * (1 - world.negative[k]);
+      terrainR[k] = 1 - (1 - slopeR[k]) * (1 - world.obstacle[k]) * (1 - world.negative[k]);
+      this.hazH[k] = 1 - (1 - terrainR[k]) * (1 - 0.9 * world.ambiguity[k]) * (1 - 0.7 * world.threat[k]);
     }
     const aHaz = new Float32Array(pos.count * 4);
     for (let i = 0; i < pos.count; i++) {
       const u = pos.getX(i) / EXTENT + 0.5;
       const v = pos.getZ(i) / EXTENT + 0.5;
-      aHaz[i * 4] = sample(slopeR, S, u, v);
-      aHaz[i * 4 + 1] = sample(world.obstacle, S, u, v);
-      aHaz[i * 4 + 2] = sample(world.negative, S, u, v);
+      aHaz[i * 4] = sample(terrainR, S, u, v);
+      aHaz[i * 4 + 1] = sample(world.ambiguity, S, u, v);
+      aHaz[i * 4 + 2] = sample(world.threat, S, u, v);
       aHaz[i * 4 + 3] = sample(this.hazH, S, u, v);
     }
     geo.setAttribute('aHaz', new THREE.BufferAttribute(aHaz, 4));
@@ -526,7 +539,7 @@ export class EyesScene {
       length: 0.18,
     });
     this.mainPath = [...fwd, ...back];
-    const period = this.mainPath.length * 0.42;
+    this.stopPhase = (fwd.length - 1) / (this.mainPath.length - 1);
 
     const addAgent = (
       id: EmbodimentId,
@@ -542,7 +555,7 @@ export class EyesScene {
       return a;
     };
 
-    this.main = addAgent('ugv', () => ({ ...poseAt(this.mainPath, (this.time / period) % 1), hover: 0 }), 0.09, false);
+    this.main = addAgent('ugv', () => ({ ...poseAt(this.mainPath, this.mainPhase), hover: 0 }), 0.09, false);
 
     /* embodiment cluster around a lake */
     const C = (this.clusterCenter = findSpot(world, (u, v, k) => {
@@ -629,6 +642,22 @@ export class EyesScene {
     this.pulses.frustumCulled = false;
     this.scene.add(this.pulses);
 
+    /* comms link: arcs from the stopped vehicle towards the Shunya OS node */
+    const cgeo = new THREE.BufferGeometry();
+    cgeo.setAttribute('position', new THREE.BufferAttribute(this.commPos, 3).setUsage(THREE.DynamicDrawUsage));
+    this.comm = new THREE.Line(cgeo, new THREE.LineBasicMaterial({ color: 0xa8e6ff, transparent: true, opacity: 0, depthWrite: false }));
+    this.comm.frustumCulled = false;
+    this.comm.renderOrder = 3;
+    const cpg = new THREE.BufferGeometry();
+    cpg.setAttribute('position', new THREE.BufferAttribute(this.commPulsePos, 3).setUsage(THREE.DynamicDrawUsage));
+    this.commPulses = new THREE.Points(
+      cpg,
+      new THREE.PointsMaterial({ color: 0xe6f7ff, size: 5, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false }),
+    );
+    this.commPulses.frustumCulled = false;
+    this.commPulses.renderOrder = 3;
+    this.scene.add(this.comm, this.commPulses);
+
     /* trajectories */
     for (let i = 0; i < 15; i++) {
       const r = new Ribbon(23, 0xebe7de);
@@ -638,6 +667,11 @@ export class EyesScene {
     this.best = new Ribbon(23, 0xa8e6ff);
     this.trail = new Ribbon(80, 0xebe7de);
     this.scene.add(this.best.mesh, this.trail.mesh);
+  }
+
+  /** Current pose of the lead ground vehicle, in world u/v. */
+  mainPose(): Pose {
+    return poseAt(this.mainPath, this.mainPhase);
   }
 
   groundY(u: number, v: number) {
@@ -717,6 +751,15 @@ export class EyesScene {
       this.mouse.y += (ty - this.mouse.y) * k;
     }
 
+    /* main vehicle: drives its loop, or heads to the goal and stops */
+    const period = this.mainPath.length * 0.42;
+    if (s.halt > 0.02) {
+      const gap = (this.stopPhase - this.mainPhase + 1) % 1;
+      this.mainPhase = (this.mainPhase + Math.min(gap, (dt / period) * (1 + 8 * s.halt))) % 1;
+    } else {
+      this.mainPhase = (this.mainPhase + dt / period) % 1;
+    }
+
     /* agents */
     const decay = Math.exp(-dt * 0.02);
     this.knowledge.decay(decay);
@@ -779,8 +822,7 @@ export class EyesScene {
     /* executed trail */
     const trailVis = s.belief * (1 - s.others) * 0.5;
     if (trailVis > 0.01) {
-      const period = this.mainPath.length * 0.42;
-      const idx = ((t / period) % 1) * (this.mainPath.length - 1);
+      const idx = this.mainPhase * (this.mainPath.length - 1);
       const pts: [number, number, number][] = [];
       for (let i = 0; i < 80; i++) {
         const j = Math.max(0, Math.floor(idx) - (79 - i) * 1);
@@ -829,6 +871,33 @@ export class EyesScene {
     (this.links.material as THREE.LineBasicMaterial).opacity = s.team * 0.35;
     (this.pulses.material as THREE.PointsMaterial).opacity = s.team;
 
+    /* comms link */
+    const cm = this.comm.material as THREE.LineBasicMaterial;
+    cm.opacity = s.comm * 0.85;
+    (this.commPulses.material as THREE.PointsMaterial).opacity = s.comm;
+    if (s.comm > 0.01) {
+      const gp = this.main.model.group.position;
+      const [hx, hz] = toXZ(A_HUB.u, A_HUB.v);
+      const a = new THREE.Vector3(gp.x, gp.y + 0.12, gp.z);
+      const b = new THREE.Vector3(hx, this.groundY(A_HUB.u, A_HUB.v) + 0.1, hz);
+      const c = a.clone().lerp(b, 0.35);
+      c.y = Math.max(a.y, b.y) + 1.4;
+      const grow = Math.min(1, s.comm * 1.2);
+      const q = new THREE.QuadraticBezierCurve3(a, c, b);
+      const n = this.commPos.length / 3;
+      for (let i = 0; i < n; i++) {
+        const p = q.getPoint((i / (n - 1)) * grow);
+        this.commPos.set([p.x, p.y, p.z], i * 3);
+      }
+      const m = this.commPulsePos.length / 3;
+      for (let i = 0; i < m; i++) {
+        const p = q.getPoint((((t * 0.3 + i / m) % 1) * grow));
+        this.commPulsePos.set([p.x, p.y, p.z], i * 3);
+      }
+      (this.comm.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+      (this.commPulses.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+    }
+
     /* camera */
     const robotP = this.main.model.group.position;
     const cc = this.clusterCenter;
@@ -836,7 +905,7 @@ export class EyesScene {
     const focus = new THREE.Vector3(cx, this.groundY(cc.u, cc.v) * (1 - s.team), cz);
     const target = new THREE.Vector3().copy(robotP).lerp(focus, s.focus);
     this.camTarget.lerp(target, this.camTarget.lengthSq() === 0 ? 1 : 1 - Math.exp(-dt * 3));
-    const az = s.azim + t * 0.015;
+    const az = s.azim + t * 0.015 * (1 - s.bev);
     const ce = Math.cos(s.elev);
     this.camera.position.set(
       this.camTarget.x + Math.cos(az) * ce * s.dist,

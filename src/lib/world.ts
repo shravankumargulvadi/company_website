@@ -17,6 +17,7 @@ export interface World {
   slope: Float32Array; // [0, 1]
   obstacle: Float32Array; // [0, 1] positive obstacles (rocks, rubble)
   negative: Float32Array; // [0, 1] negative obstacles (holes, ditches)
+  ambiguity: Float32Array; // [0, 1] where sensing is unreliable (dust, vegetation, clutter)
   water: Float32Array; // [0, 1]
   threat: Float32Array; // [0, 1]
   threats: Threat[];
@@ -132,6 +133,17 @@ export function createWorld(opts: WorldOptions = {}): World {
     }
   }
 
+  const ambiguity = new Float32Array(N);
+  if (opts.hazards) {
+    const na = createNoise2D(seed * 13 + 1);
+    for (let j = 0; j < size; j++) {
+      for (let i = 0; i < size; i++) {
+        const a = fbm(na, (i / (size - 1)) * 4.5, (j / (size - 1)) * 4.5, 3) * 0.5 + 0.5;
+        ambiguity[j * size + i] = smoothstep(0.62, 0.82, a);
+      }
+    }
+  }
+
   const water = new Float32Array(N);
   const threat = new Float32Array(N);
   for (let j = 0; j < size; j++) {
@@ -150,7 +162,7 @@ export function createWorld(opts: WorldOptions = {}): World {
     }
   }
 
-  return { size, height, slope, obstacle, negative, water, threat, threats, waterLevel };
+  return { size, height, slope, obstacle, negative, ambiguity, water, threat, threats, waterLevel };
 }
 
 export function smoothstep(a: number, b: number, x: number) {
@@ -235,7 +247,8 @@ export function riskAt(
   const th = sample(w.threat, w.size, u, v);
   const terrain = Math.min(1, p.slope * s + p.water * wa + p.land * (1 - wa));
   const unk = p.unknown * (1 - knowledge);
-  return 1 - (1 - terrain) * (1 - p.threat * th) * (1 - unk);
+  const amb = 0.8 * sample(w.ambiguity, w.size, u, v);
+  return 1 - (1 - terrain) * (1 - p.threat * th) * (1 - unk) * (1 - amb);
 }
 
 /* ---------- Knowledge (belief coverage) ---------- */

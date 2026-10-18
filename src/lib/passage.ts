@@ -2,8 +2,9 @@
  * Confined-passage model (cave / tunnel / culvert) used by Candidate A's
  * underground chapter and the passage proof placeholder.
  *
- * Deterministic: a looped passage with a side branch, rubble, boulders and a
- * ledge; a rover path through it; a 360° range sensor with occlusion; and a
+ * Deterministic: an entry tunnel to a fork, a short straight branch with a drop
+ * and rubble in it, and a long low-risk detour that the rover takes; a 360°
+ * range sensor with occlusion; and a
  * 2.5D elevation / risk grid whose cells record where along the path they
  * were first seen and where they were seen best. Rendering code only compares
  * those values against the current path distance, so scrubbing is free.
@@ -43,6 +44,12 @@ export interface Passage {
   range: number;
   base: number;
   wallTop: number;
+  /** Path distance at the fork. */
+  junction: number;
+  /** The short, straight branch from the fork to the goal (not driven). */
+  direct: { x: number; z: number; y: number }[];
+  directLen: number;
+  detourLen: number;
 }
 
 export interface PassageOptions {
@@ -53,80 +60,90 @@ export interface PassageOptions {
 
 const TAU = Math.PI * 2;
 const sat = (v: number) => Math.min(1, Math.max(0, v));
-const angDist = (a: number, b: number) => {
-  const d = Math.abs(a - b) % TAU;
-  return d > Math.PI ? TAU - d : d;
-};
 
 interface Seg {
   ax: number; az: number; bx: number; bz: number;
-  wa: number; wb: number; th: number; loop: boolean;
+  wa: number; wb: number;
 }
+
+type Pt = { x: number; z: number };
+
+/** Uniform Catmull-Rom through `ctrl`, resampled roughly every `step` metres. */
+function spline(ctrl: [number, number][], step = 0.25): Pt[] {
+  const c = [ctrl[0], ...ctrl, ctrl[ctrl.length - 1]];
+  const out: Pt[] = [];
+  for (let i = 1; i < c.length - 2; i++) {
+    const [p0, p1, p2, p3] = [c[i - 1], c[i], c[i + 1], c[i + 2]];
+    const k = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let j = 0; j < k; j++) {
+      const t = j / k;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const f = (a: number, b: number, cc: number, d: number) =>
+        0.5 * (2 * b + (-a + cc) * t + (2 * a - 5 * b + 4 * cc - d) * t2 + (-a + 3 * b - 3 * cc + d) * t3);
+      out.push({ x: f(p0[0], p1[0], p2[0], p3[0]), z: f(p0[1], p1[1], p2[1], p3[1]) });
+    }
+  }
+  const last = ctrl[ctrl.length - 1];
+  out.push({ x: last[0], z: last[1] });
+  return out;
+}
+
+const polyLen = (p: Pt[]) => p.slice(1).reduce((acc, q, i) => acc + Math.hypot(q.x - p[i].x, q.z - p[i].z), 0);
 
 export function createPassage(opts: PassageOptions = {}): Passage {
   const { res = 224, n = 96, seed = 7 } = opts;
   const E = 30;
-  const C = E / 2;
   const wallTop = 2.4;
-  const range = 6;
+  const range = 7;
   const nA = createNoise2D(seed);
   const nB = createNoise2D(seed + 11);
   const nF = createNoise2D(seed + 23);
   const nR = createNoise2D(seed + 37);
   const rnd = mulberry32(seed + 5);
 
-  /* centreline: a closed, irregular loop with one chamber */
-  const M = 420;
-  const cl: { x: number; z: number; w: number; th: number }[] = [];
-  for (let i = 0; i < M; i++) {
-    const th = (i / M) * TAU;
-    const c = Math.cos(th);
-    const s = Math.sin(th);
-    const r = 1 + 0.2 * fbm(nA, 3 + 1.2 * c, 3 + 1.2 * s, 3);
-    let w = 0.95 + 0.6 * (fbm(nB, 7 + 1.6 * c, 7 + 1.6 * s, 3) * 0.5 + 0.5);
-    w += 1.5 * Math.exp(-(angDist(th, 2.4) ** 2) / 0.05);
-    cl.push({ x: C + 10.8 * r * c, z: C + 8.6 * r * s, w, th });
-  }
+  /* an entry tunnel reaches a fork: a short straight branch to the goal
+     chamber (with a drop and rubble in it), and a long winding detour */
+  const J: Pt = { x: 9.5, z: 19 };
+  const G: Pt = { x: 21.5, z: 12.5 };
+  const entry = spline([[3.2, 26.8], [5.2, 24.6], [7.6, 21.6], [J.x, J.z]]);
+  const detour = spline([
+    [J.x, J.z], [7.4, 15.5], [7.2, 11.5], [9.2, 7.2], [13.5, 4.6], [18.5, 4.0], [23, 5.4], [25.2, 8.6], [24.4, 11.6], [G.x, G.z],
+  ]);
+  const dLen = Math.hypot(G.x - J.x, G.z - J.z);
+  const ux = (G.x - J.x) / dLen;
+  const uz = (G.z - J.z) / dLen;
+  const direct: Pt[] = [];
+  for (let d = 0; d <= dLen + 1e-6; d += 0.25) direct.push({ x: J.x + ux * d, z: J.z + uz * d });
 
   const segs: Seg[] = [];
-  for (let i = 0; i < M; i++) {
-    const a = cl[i];
-    const b = cl[(i + 1) % M];
-    segs.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, wa: a.w, wb: b.w, th: a.th, loop: true });
-  }
+  const addPoly = (p: Pt[], w: (q: Pt, t: number) => number) => {
+    for (let i = 0; i < p.length - 1; i++) {
+      const t0 = i / (p.length - 1);
+      const t1 = (i + 1) / (p.length - 1);
+      segs.push({ ax: p[i].x, az: p[i].z, bx: p[i + 1].x, bz: p[i + 1].z, wa: w(p[i], t0), wb: w(p[i + 1], t1) });
+    }
+  };
+  const wig = (q: Pt, a: number, b: number) => a + b * (fbm(nB, q.x * 0.18 + 7, q.z * 0.18 + 7, 3) * 0.5 + 0.5);
+  addPoly(entry, (q) => wig(q, 0.95, 0.35));
+  addPoly(detour, (q) => wig(q, 1.1, 0.55));
+  addPoly(direct, (_q, t) => 0.95 - 0.2 * smoothstep(0.45, 0.65, t) + 0.2 * smoothstep(0.85, 1, t));
+  segs.push({ ax: G.x, az: G.z, bx: G.x, bz: G.z, wa: 2.0, wb: 2.0 });
+  segs.push({ ax: J.x, az: J.z, bx: J.x, bz: J.z, wa: 1.45, wb: 1.45 });
 
-  /* dead-end side branch the rover never enters: it stays partly unknown */
-  const b0 = cl[Math.round((5.15 / TAU) * M)];
-  const ox = b0.x - C;
-  const oz = b0.z - C;
-  const ol = Math.hypot(ox, oz);
-  const dx = ox / ol;
-  const dz = oz / ol;
-  let px = b0.x;
-  let pz = b0.z;
-  const K = 24;
-  for (let k = 1; k <= K; k++) {
-    const t = k / K;
-    const wig = Math.sin(t * 4) * 0.9;
-    const qx = b0.x + dx * 9.5 * t - dz * wig;
-    const qz = b0.z + dz * 9.5 * t + dx * wig;
-    segs.push({ ax: px, az: pz, bx: qx, bz: qz, wa: 0.85 - 0.35 * (t - 1 / K), wb: 0.85 - 0.35 * t, th: -1, loop: false });
-    px = qx;
-    pz = qz;
-  }
-
-  /* boulders, placed off the driving line */
-  const boulders: { x: number; z: number; r: number; h: number }[] = [];
-  for (let k = 0; k < 9; k++) {
-    const i = Math.floor((0.08 + rnd() * 0.84) * M);
-    const a = cl[i];
-    const b = cl[(i + 1) % M];
+  /* the direct branch's hazards: a drop across the floor, then rubble */
+  const CREV = 4.8;
+  const boulders: { x: number; z: number; r: number; h: number }[] = [
+    [8.2, 0.3], [8.9, -0.32], [9.6, 0.08], [10.3, -0.18], [10.9, 0.3],
+  ].map(([t, l]) => ({ x: J.x + ux * t - uz * l, z: J.z + uz * t + ux * l, r: 0.28 + rnd() * 0.1, h: 0.45 + rnd() * 0.2 }));
+  for (let k = 0; k < 6; k++) {
+    const i = Math.floor((0.1 + rnd() * 0.8) * (detour.length - 1));
+    const a = detour[i];
+    const b = detour[i + 1];
     const l = Math.hypot(b.x - a.x, b.z - a.z);
-    const nx = -(b.z - a.z) / l;
-    const nz = (b.x - a.x) / l;
     const side = rnd() < 0.5 ? -1 : 1;
-    const off = (0.62 + rnd() * 0.22) * a.w * side;
-    boulders.push({ x: a.x + nx * off, z: a.z + nz * off, r: 0.22 + rnd() * 0.18, h: 0.35 + rnd() * 0.4 });
+    const off = (0.85 + rnd() * 0.3) * side;
+    boulders.push({ x: a.x - ((b.z - a.z) / l) * off, z: a.z + ((b.x - a.x) / l) * off, r: 0.2 + rnd() * 0.15, h: 0.3 + rnd() * 0.3 });
   }
 
   /* fine raster: signed distance to passage, then floor / wall / ceiling */
@@ -139,32 +156,25 @@ export function createPassage(opts: PassageOptions = {}): Passage {
       const x = (i / (R - 1)) * E;
       const z = (j / (R - 1)) * E;
       let best = 1e9;
-      let th = -1;
-      let lat = 0;
       for (const g of segs) {
         const vx = g.bx - g.ax;
         const vz = g.bz - g.az;
         const wx = x - g.ax;
         const wz = z - g.az;
         const L2 = vx * vx + vz * vz;
-        const t = Math.min(1, Math.max(0, (wx * vx + wz * vz) / L2));
+        const t = L2 > 0 ? Math.min(1, Math.max(0, (wx * vx + wz * vz) / L2)) : 0;
         const ex = wx - vx * t;
         const ez = wz - vz * t;
         const d = Math.sqrt(ex * ex + ez * ez) - (g.wa + (g.wb - g.wa) * t);
-        if (d < best) {
-          best = d;
-          th = g.loop ? g.th : -1;
-          lat = (vx * wz - vz * wx) / Math.sqrt(L2);
-        }
+        if (d < best) best = d;
       }
       const k = j * R + i;
       sdfF[k] = best;
 
-      let f = 0.18 * fbm(nF, x * 0.22, z * 0.22, 3) + 0.05 * fbm(nR, x * 1.6, z * 1.6, 2);
-      if (th >= 0) {
-        const span = smoothstep(0.7, 0.85, th) * (1 - smoothstep(1.75, 1.95, th));
-        f -= 0.42 * span * smoothstep(0.42, 0.55, lat);
-      }
+      let f = 0.16 * fbm(nF, x * 0.22, z * 0.22, 3) + 0.05 * fbm(nR, x * 1.6, z * 1.6, 2);
+      const along = (x - J.x) * ux + (z - J.z) * uz;
+      const lat = Math.abs(-(x - J.x) * uz + (z - J.z) * ux);
+      if (along > 0 && along < dLen) f -= 1.5 * (1 - smoothstep(0.3, 0.62, Math.abs(along - CREV))) * (1 - smoothstep(1.3, 2.2, lat));
       for (const b of boulders) {
         const d2 = ((x - b.x) ** 2 + (z - b.z) ** 2) / (b.r * b.r);
         if (d2 < 4) f += b.h * Math.exp(-d2 * 1.4);
@@ -172,7 +182,7 @@ export function createPassage(opts: PassageOptions = {}): Passage {
       const rock = smoothstep(0, 0.9, best);
       const h = f + wallTop * rock + 0.2 * fbm(nR, x * 2.2, z * 2.2, 3) * smoothstep(-0.1, 0.3, best);
       floor[k] = Math.min(h, f + wallTop + 0.3);
-      const roof = f + 2.3 + 0.35 * fbm(nA, x * 0.6 + 40, z * 0.6, 3) - 2.2 * smoothstep(-0.9, 0.35, best);
+      const roof = Math.max(f, 0) + 2.3 + 0.35 * fbm(nA, x * 0.6 + 40, z * 0.6, 3) - 2.2 * smoothstep(-0.9, 0.35, best);
       ceil[k] = Math.max(floor[k], roof);
     }
   }
@@ -222,21 +232,10 @@ export function createPassage(opts: PassageOptions = {}): Passage {
     }
   }
 
-  /* rover path: inner side of the loop, ~93% of the way round */
+  /* rover path: entry tunnel, then the long way round */
   const ds = 0.1;
-  const off: { x: number; z: number }[] = cl.map((a, i) => {
-    const b = cl[(i + 1) % M];
-    const p = cl[(i - 1 + M) % M];
-    const tx = b.x - p.x;
-    const tz = b.z - p.z;
-    const l = Math.hypot(tx, tz);
-    return { x: a.x + (tz / l) * 0.3, z: a.z - (tx / l) * 0.3 };
-  });
-  const start = Math.round((0.25 / TAU) * M);
-  const pts: { x: number; z: number }[] = [];
-  for (let k = 0; k <= M; k++) pts.push(off[(start + k) % M]);
-  const total = pts.slice(1).reduce((acc, p, i) => acc + Math.hypot(p.x - pts[i].x, p.z - pts[i].z), 0);
-  const length = total * 0.93;
+  const pts: Pt[] = [...entry, ...detour.slice(1)];
+  const length = polyLen(pts) - 0.05;
   const path: PassagePose[] = [];
   let seg = 0;
   let segS = 0;
@@ -296,7 +295,13 @@ export function createPassage(opts: PassageOptions = {}): Passage {
     }
   }
 
-  return { extent: E, res: R, floor, ceil, n, cell, height, risk, open, s1, r1, s2, r2, path, ds, length, range, base, wallTop };
+  return {
+    extent: E, res: R, floor, ceil, n, cell, height, risk, open, s1, r1, s2, r2, path, ds, length, range, base, wallTop,
+    junction: polyLen(entry),
+    direct: direct.map((p) => ({ ...p, y: fine(floor, p.x, p.z) })),
+    directLen: dLen,
+    detourLen: polyLen(detour),
+  };
 }
 
 export function poseAtS(P: Passage, s: number): PassagePose {

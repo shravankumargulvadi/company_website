@@ -1,8 +1,15 @@
 /**
  * Candidate A — underground chapter. One WebGL context, two viewports:
  * the machine's headlit camera view of the passage, and the 2.5D risk map it
- * builds from its range sensor. Both are driven by path distance `s`.
+ * builds from its range sensor. Both are driven by path distance `s`, plus a
+ * `view` that turns the camera towards the direct branch and overlays both routes.
  */
+
+export interface DeepView {
+  look?: number;
+  compare?: number;
+  decided?: number;
+}
 import * as THREE from 'three';
 import { PASSAGE_RAMP, poseAtS, type Passage } from '../../lib/passage';
 
@@ -97,6 +104,10 @@ export class DeepScene {
   private aheadFpv: THREE.Line;
   private ring: THREE.LineLoop;
   private marker = new THREE.Group();
+  private directFpv: THREE.Line;
+  private directMap: THREE.Line;
+  private detourMap: THREE.Line;
+  private directHeading: number;
   private vertical = false;
   private w = 1;
   private h = 1;
@@ -171,6 +182,34 @@ export class DeepScene {
     this.ring = new THREE.LineLoop(ringG, new THREE.LineBasicMaterial({ color: 0xa8e6ff, transparent: true, opacity: 0.3 }));
     this.map.add(this.ring);
 
+    /* the two routes from the fork */
+    const lineFrom = (pts: THREE.Vector3[], mat: THREE.LineBasicMaterial | THREE.LineDashedMaterial) => {
+      const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat);
+      l.computeLineDistances();
+      l.frustumCulled = false;
+      l.renderOrder = 2;
+      return l;
+    };
+    const ji = Math.round(P.junction / P.ds);
+    const floorY = Math.max(this.mapY(P.path[ji].y), 0.3);
+    this.directMap = lineFrom(
+      P.direct.map((p) => new THREE.Vector3(p.x, Math.max(this.mapY(p.y), floorY) + 0.18, p.z)),
+      new THREE.LineDashedMaterial({ color: 0xff4a2e, dashSize: 0.5, gapSize: 0.3, transparent: true, opacity: 0, depthTest: false }),
+    );
+    this.detourMap = lineFrom(
+      P.path.slice(ji).filter((_, i) => i % 2 === 0).map((p) => new THREE.Vector3(p.x, this.mapY(p.y) + 0.14, p.z)),
+      new THREE.LineBasicMaterial({ color: 0xa8e6ff, transparent: true, opacity: 0, depthTest: false }),
+    );
+    this.map.add(this.directMap, this.detourMap);
+    this.directFpv = lineFrom(
+      P.direct.map((p) => new THREE.Vector3(p.x, p.y + 0.035, p.z)),
+      new THREE.LineDashedMaterial({ color: 0xff4a2e, dashSize: 0.3, gapSize: 0.2, transparent: true, opacity: 0 }),
+    );
+    this.fpv.add(this.directFpv);
+    const d0 = P.direct[0];
+    const d1 = P.direct[P.direct.length - 1];
+    this.directHeading = Math.atan2(d1.z - d0.z, d1.x - d0.x);
+
     const cone = new THREE.ConeGeometry(0.34, 0.95, 3);
     cone.rotateZ(-Math.PI / 2);
     this.marker.add(new THREE.Mesh(cone, new THREE.MeshBasicMaterial({ color: 0x060708 })));
@@ -205,15 +244,37 @@ export class DeepScene {
     pos.needsUpdate = true;
   }
 
-  frame(dt: number, s: number) {
+  /** Screen positions (CSS px) for the two route labels. */
+  anchors() {
     const P = this.P;
+    const ji = Math.round(P.junction / P.ds);
+    const dm = P.direct[Math.floor(P.direct.length * 0.42)];
+    const tm = P.path[Math.min(P.path.length - 1, ji + Math.round(P.detourLen / P.ds / 2))];
+    const proj = (x: number, y: number, z: number) => {
+      const v = new THREE.Vector3(x, y, z).project(this.mapCam);
+      const [vx, vy, vw, vh] = this.vertical ? [0, this.h / 2, this.w, this.h / 2] : [this.w / 2, 0, this.w / 2, this.h];
+      const sx = vx + ((v.x + 1) / 2) * vw;
+      const sy = vy + ((1 - v.y) / 2) * vh;
+      return [Math.min(Math.max(sx, vx + 12), vx + vw - 280), Math.min(Math.max(sy, vy + 160), vy + vh - 150)] as const;
+    };
+    return { direct: proj(dm.x, 0.6, dm.z), detour: proj(tm.x, this.mapY(tm.y) + 0.6, tm.z) };
+  }
+
+  frame(dt: number, s: number, view: DeepView = {}) {
+    const P = this.P;
+    const { look = 0, compare = 0, decided = 0 } = view;
     this.time += dt;
     s = Math.min(P.length - 0.01, Math.max(0, s));
     const pose = poseAtS(P, s);
 
     const bob = Math.sin(s * 7) * 0.01;
+    const dh = Math.atan2(Math.sin(this.directHeading - pose.heading), Math.cos(this.directHeading - pose.heading));
+    const hd = pose.heading + dh * look;
     this.fpvCam.position.set(pose.x, pose.y + 0.55 + bob, pose.z);
-    this.fpvCam.lookAt(pose.x + Math.cos(pose.heading) * 1.8, pose.y + 0.38, pose.z + Math.sin(pose.heading) * 1.8);
+    this.fpvCam.lookAt(pose.x + Math.cos(hd) * 1.8, pose.y + 0.38, pose.z + Math.sin(hd) * 1.8);
+    (this.directFpv.material as THREE.LineDashedMaterial).opacity = compare * 0.9 * (1 - decided * 0.5);
+    (this.directMap.material as THREE.LineDashedMaterial).opacity = compare * (1 - decided * 0.45);
+    (this.detourMap.material as THREE.LineBasicMaterial).opacity = compare * (0.45 + 0.5 * decided);
     this.fillAhead(this.aheadFpv, s + 0.4, s + 4.5, (p) => p.y + 0.035);
 
     const U = this.mapMat.uniforms;
@@ -230,9 +291,9 @@ export class DeepScene {
     const q = s / P.length;
     const az = -1.95 + q * 0.8 + 0.05 * Math.sin(this.time * 0.2);
     const el = 1.0;
-    const dist = this.vertical ? 58 : 50;
-    const tx = C + (pose.x - C) * 0.12;
-    const tz = C + (pose.z - C) * 0.12;
+    const dist = this.vertical ? 70 : 62;
+    const tx = C + (pose.x - C) * 0.06;
+    const tz = C + (pose.z - C) * 0.06;
     this.mapCam.position.set(tx + dist * Math.cos(el) * Math.cos(az), dist * Math.sin(el), tz + dist * Math.cos(el) * Math.sin(az));
     this.mapCam.lookAt(tx, 0, tz);
 
