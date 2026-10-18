@@ -755,7 +755,10 @@ export class EyesScene {
     const period = this.mainPath.length * 0.42;
     if (s.halt > 0.02) {
       const gap = (this.stopPhase - this.mainPhase + 1) % 1;
-      this.mainPhase = (this.mainPhase + Math.min(gap, (dt / period) * (1 + 8 * s.halt))) % 1;
+      const step = (dt / period) * (1 + 8 * s.halt);
+      /* arrived (or a rounding hair past the stop): stay put instead of looping again */
+      if (gap <= step || gap > 1 - 1e-3) this.mainPhase = this.stopPhase;
+      else this.mainPhase = (this.mainPhase + step) % 1;
     } else {
       this.mainPhase = (this.mainPhase + dt / period) % 1;
     }
