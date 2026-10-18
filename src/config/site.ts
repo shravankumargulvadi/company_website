@@ -9,6 +9,5 @@ export const site = {
 
 export const candidates = [
   { slug: 'candidate-a', letter: 'A', title: "The Machine's Eyes" },
-  { slug: 'candidate-b', letter: 'B', title: 'The Autonomy Machine' },
   { slug: 'candidate-c', letter: 'C', title: 'From One Machine to a Force' },
 ] as const;

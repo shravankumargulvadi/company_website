@@ -1,6 +1,6 @@
 /**
- * Embodiment glyphs as SVG path data so they render identically in SVG
- * (candidate B) and Canvas via Path2D (candidates A fallback, C).
+ * Embodiment glyphs as SVG path data, rendered on Canvas via Path2D
+ * (candidate A fallback and BEV chapter, candidate C).
  * Placeholder line art — replace with final illustrations later.
  */
 import type { EmbodimentId } from './world';

@@ -370,7 +370,7 @@ export class ForceScene {
     }
     ctx.restore();
 
-    // Network: operators <-> orchestration hub, with moving pulses
+    // Network: operators <-> Shunya OS hub, with moving pulses
     if (s.network > 0.01) {
       const hx = X(this.hub.u), hy = Y(this.hub.v);
       for (const [i, n] of this.operators.entries()) {
@@ -389,7 +389,7 @@ export class ForceScene {
       ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.rect(hx - 9, hy - 9, 18, 18); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(hx, hy, 18 + Math.sin(this.time * 2) * 2, 0, Math.PI * 2); ctx.stroke();
-      label('ORCHESTRATION OS', hx + 28, hy + 4, s.network, '143,216,204', 11);
+      label('SHUNYA OS', hx + 28, hy + 4, s.network, '143,216,204', 11);
       const centers = [0, 1, 2].map((t) => {
         const m = all.filter((a) => a.team === t);
         return { u: m.reduce((x, a) => x + a.pose.u, 0) / m.length, v: m.reduce((x, a) => x + a.pose.v, 0) / m.length, n: m.length + (t === 0 ? 1 : 0) };

@@ -23,13 +23,6 @@
   --font-display: var(--font-serif);
 }
 
-[data-theme='b'] {
-  --bg: #0a0a0b;
-  --fg: #ecebe6;
-  --accent: #ff5b14;
-  --font-display: var(--font-grotesk);
-}
-
 [data-theme='c'] {
   --bg: #04060a;
   --fg: #e6e9ea;
