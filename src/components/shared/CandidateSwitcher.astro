@@ -1,0 +1,67 @@
+---
+/** Internal review control for comparing prototypes. Remove for production. */
+import { candidates } from '../../config/site';
+
+interface Props {
+  current: string;
+}
+const { current } = Astro.props;
+---
+
+<nav class="switcher" aria-label="Prototype candidates">
+  <a href="/" class="switcher__home" title="All candidates">Prototype</a>
+  {
+    candidates.map((c) => (
+      <a
+        href={`/${c.slug}`}
+        class:list={['switcher__item', { 'is-current': c.letter.toLowerCase() === current }]}
+        title={c.title}
+        aria-current={c.letter.toLowerCase() === current ? 'page' : undefined}
+      >
+        {c.letter}
+      </a>
+    ))
+  }
+</nav>
+
+<style>
+  .switcher {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    background: rgba(10, 10, 12, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .switcher a {
+    display: grid;
+    place-items: center;
+    height: 26px;
+    min-width: 26px;
+    padding: 0 8px;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.55);
+    transition: color 0.2s, background 0.2s;
+  }
+  .switcher a:hover {
+    color: #fff;
+  }
+  .switcher__home {
+    padding: 0 10px !important;
+  }
+  .switcher__item.is-current {
+    background: rgba(255, 255, 255, 0.92);
+    color: #000;
+  }
+</style>
