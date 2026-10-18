@@ -44,12 +44,17 @@ export interface Passage {
   range: number;
   base: number;
   wallTop: number;
-  /** Path distance at the fork. */
+  /** Path distance at the fork, where it stops in the direct branch, and back at the fork. */
   junction: number;
+  probe: number;
+  back: number;
   /** The short, straight branch from the fork to the goal (not driven). */
   direct: { x: number; z: number; y: number }[];
   directLen: number;
   detourLen: number;
+  /** Map cells inside the drop, and the near edge of the drop (for marking it). */
+  deep: Uint8Array;
+  dropEdge: { x: number; z: number; y: number }[];
 }
 
 export interface PassageOptions {
@@ -232,9 +237,16 @@ export function createPassage(opts: PassageOptions = {}): Passage {
     }
   }
 
-  /* rover path: entry tunnel, then the long way round */
+  /* rover path: entry tunnel, a few metres into the direct branch until the drop is
+     close enough to see, reverse back to the fork, then the long way round */
+  const PROBE = 3.2;
+  const probeIn = direct.filter((p) => Math.hypot(p.x - J.x, p.z - J.z) <= PROBE);
+  const probeOut = probeIn.slice(0, -1).reverse();
   const ds = 0.1;
-  const pts: Pt[] = [...entry, ...detour.slice(1)];
+  const pts: Pt[] = [...entry, ...probeIn.slice(1), ...probeOut, ...detour.slice(1)];
+  const sJ = polyLen(entry);
+  const sProbe = sJ + polyLen(probeIn);
+  const sBack = sProbe + polyLen([probeIn[probeIn.length - 1], ...probeOut]);
   const length = polyLen(pts) - 0.05;
   const path: PassagePose[] = [];
   let seg = 0;
@@ -254,12 +266,33 @@ export function createPassage(opts: PassageOptions = {}): Passage {
     const z = a.z + (b.z - a.z) * t;
     path.push({ x, z, y: fine(floor, x, z), heading: 0, s });
   }
+  /* heading follows travel, except while reversing (it keeps facing the drop) */
+  const raw = path.map((p, i) => {
+    const a = path[Math.max(0, i - 1)];
+    const b = path[Math.min(path.length - 1, i + 1)];
+    const h = Math.atan2(b.z - a.z, b.x - a.x);
+    return p.s > sProbe && p.s < sBack ? h + Math.PI : h;
+  });
   for (let i = 0; i < path.length; i++) {
-    const a = path[Math.max(0, i - 6)];
-    const b = path[Math.min(path.length - 1, i + 6)];
-    path[i].heading = Math.atan2(b.z - a.z, b.x - a.x);
+    let cx = 0;
+    let cz = 0;
+    for (let k = -8; k <= 8; k++) {
+      const h = raw[Math.min(path.length - 1, Math.max(0, i + k))];
+      cx += Math.cos(h);
+      cz += Math.sin(h);
+    }
+    path[i].heading = Math.atan2(cz, cx);
   }
   const base = Math.min(...path.map((p) => p.y)) - 0.15;
+
+  const deep = new Uint8Array(n * n);
+  for (let k = 0; k < n * n; k++) {
+    const x = ((k % n) + 0.5) * cell;
+    const z = (Math.floor(k / n) + 0.5) * cell;
+    const along = (x - J.x) * ux + (z - J.z) * uz;
+    const lat = Math.abs(-(x - J.x) * uz + (z - J.z) * ux);
+    deep[k] = along > 0 && along < dLen && Math.abs(along - CREV) < 0.75 && lat < 1.6 ? 1 : 0;
+  }
 
   /* range sensor with occlusion, swept along the path */
   const s1 = new Float32Array(n * n).fill(Infinity);
@@ -282,6 +315,8 @@ export function createPassage(opts: PassageOptions = {}): Passage {
         const k = j * n + i;
         if (k === last) continue;
         last = k;
+        /* you can't see into a drop until you're near its edge */
+        if (deep[k] && d > 2.2) continue;
         if (s1[k] === Infinity) {
           s1[k] = p.s;
           r1[k] = d;
@@ -297,10 +332,18 @@ export function createPassage(opts: PassageOptions = {}): Passage {
 
   return {
     extent: E, res: R, floor, ceil, n, cell, height, risk, open, s1, r1, s2, r2, path, ds, length, range, base, wallTop,
-    junction: polyLen(entry),
+    junction: sJ,
+    probe: sProbe,
+    back: sBack,
     direct: direct.map((p) => ({ ...p, y: fine(floor, p.x, p.z) })),
     directLen: dLen,
     detourLen: polyLen(detour),
+    deep,
+    dropEdge: [-1.1, 1.1].map((l) => {
+      const x = J.x + ux * (CREV - 0.62) - uz * l;
+      const z = J.z + uz * (CREV - 0.62) + ux * l;
+      return { x, z, y: fine(floor, x, z) };
+    }),
   };
 }
 

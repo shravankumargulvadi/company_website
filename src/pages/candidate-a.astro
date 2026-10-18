@@ -14,8 +14,8 @@ const stages = [
 ];
 const beats = [
   { h: 'No GPS. No light. No map.', p: 'Underground, under canopy, inside structures: where remote control fails first.' },
-  { h: 'The obvious route.', p: 'Short, straight and in plain sight. The machine can also see what it would cost.' },
-  { h: 'So it takes the long way.', p: 'More than twice the distance, at a fraction of the risk. Counterintuitive, and correct.' },
+  { h: 'The obvious route.', p: 'Short and straight, so it starts down it. Then, up close, it sees a drop across the floor.' },
+  { h: 'It backs out and takes the long way.', p: 'More than twice the distance, at a fraction of the risk. Counterintuitive, and correct.' },
   { h: 'Unknown is not the same as safe.', p: 'It commits only where the evidence supports it, and still completes the mission.' },
 ];
 const forceCaps = [
@@ -143,7 +143,7 @@ const forceCaps = [
         <div class="deep__shade" aria-hidden="true"></div>
         <p class="deep__tag deep__tag--l mono">Machine view · camera</p>
         <p class="deep__tag deep__tag--r mono">Belief · risk map</p>
-        <p class="deep__route deep__route--direct mono" data-route="direct" aria-hidden="true">Direct · <b data-len="direct">–</b> m · high risk</p>
+        <p class="deep__route deep__route--direct mono" data-route="direct" aria-hidden="true">Direct · <b data-len="direct">–</b> m · drop · high risk</p>
         <p class="deep__route deep__route--detour mono" data-route="detour" aria-hidden="true">Detour · <b data-len="detour">–</b> m · low risk</p>
         <div class="deep__copy">
           <p class="eyebrow">08 — Fieldcore OS</p>
@@ -395,19 +395,19 @@ const forceCaps = [
     deepSec.querySelector('[data-len="direct"]')!.textContent = P.directLen.toFixed(0);
     deepSec.querySelector('[data-len="detour"]')!.textContent = P.detourLen.toFixed(0);
     /* drive to the fork, hold while it weighs both branches, then take the detour */
+    /* to the fork, a few metres down the direct branch, hold while the drop resolves,
+       reverse out, then the detour */
     const target = () => {
       const p = sectionProgress('deep');
-      if (p < 0.22) return range(p, 0.03, 0.22) * sJ;
-      if (p < 0.55) return sJ;
-      return sJ + range(p, 0.55, 0.95) * (sEnd - sJ);
+      if (p < 0.2) return range(p, 0.03, 0.2) * sJ;
+      if (p < 0.32) return sJ + smooth(range(p, 0.2, 0.32)) * (P.probe - sJ);
+      if (p < 0.44) return P.probe;
+      if (p < 0.54) return P.probe + smooth(range(p, 0.44, 0.54)) * (P.back - P.probe);
+      return P.back + range(p, 0.54, 0.95) * (sEnd - P.back);
     };
     const viewAt = () => {
       const p = sectionProgress('deep');
-      return {
-        look: smooth(range(p, 0.25, 0.33)) * (1 - smooth(range(p, 0.44, 0.53))),
-        compare: smooth(range(p, 0.27, 0.35)),
-        decided: smooth(range(p, 0.45, 0.52)),
-      };
+      return { look: 0, compare: smooth(range(p, 0.33, 0.38)), decided: smooth(range(p, 0.41, 0.45)) };
     };
     let s = target();
     let lastStat = -1;
