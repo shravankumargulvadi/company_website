@@ -884,7 +884,7 @@ export class EyesScene {
       const a = new THREE.Vector3(gp.x, gp.y + 0.12, gp.z);
       const b = new THREE.Vector3(hx, this.groundY(A_HUB.u, A_HUB.v) + 0.1, hz);
       const c = a.clone().lerp(b, 0.35);
-      c.y = Math.max(a.y, b.y) + 1.4;
+      c.y = Math.max(a.y, b.y) + 1.4 * (1 - 0.9 * s.bev);
       const grow = Math.min(1, s.comm * 1.2);
       const q = new THREE.QuadraticBezierCurve3(a, c, b);
       const n = this.commPos.length / 3;
