@@ -205,10 +205,10 @@ const forceCaps = [
         </div>
         <div class="deep__switch mono" role="tablist" aria-label="Applications of Fieldcore OS">
           <span class="deep__badge">Applications</span>
-          <button type="button" role="tab" data-tab="forest" aria-selected="true">Under-canopy</button>
-          <button type="button" role="tab" data-tab="air" aria-selected="false">Fixed-wing</button>
-          <button type="button" role="tab" data-tab="ground" aria-selected="false">Underground</button>
-          <button type="button" role="tab" data-tab="pilot" aria-selected="false">Pilot assistance</button>
+          <button type="button" role="tab" data-tab="forest" aria-selected="true">Scout the route</button>
+          <button type="button" role="tab" data-tab="air" aria-selected="false">Stay unseen</button>
+          <button type="button" role="tab" data-tab="ground" aria-selected="false">Explore safely</button>
+          <button type="button" role="tab" data-tab="pilot" aria-selected="false">Land safely</button>
         </div>
         <div class="deep__recon-cut" aria-hidden="true"><span>Low-risk corridor confirmed</span></div>
         <p class="deep__pilot-label mono" data-recon-label>UGV launch deck · quadrotor scout</p>
@@ -718,7 +718,7 @@ const forceCaps = [
       pilotPanel.hidden = t !== 'pilot';
       reconPanel.hidden = t !== 'forest';
       deepSec.querySelector('[data-application-title]')!.textContent = `Application · ${
-        { forest: 'under-canopy reconnaissance', air: 'fixed-wing autonomy', ground: 'underground autonomy', pilot: 'manned pilot assistance' }[t]}`;
+        { forest: 'under-canopy reconnaissance', air: 'fixed-wing under radar', ground: 'GPS-denied underground', pilot: 'manned pilot assistance' }[t]}`;
       deepSec.querySelector('.deep__tag--r')!.textContent = t === 'forest' ? 'Observed terrain · route assessment'
         : t === 'pilot' ? 'Terrain risk · trajectory assessment' : 'Belief · risk map';
       if (t === 'forest' && !forestLoading) {
