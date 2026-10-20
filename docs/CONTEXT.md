@@ -23,12 +23,13 @@ Never position it as only a UGV, drone, hardware, swarm or generic-AI company.
 - PR #1 is merged; it created the original exploration with candidates A, B and C.
 - PR #2 (https://github.com/shravankumargulvadi/company_website/pull/2) is open, on branch `devin/1792319361-consolidate-a`. It holds all the consolidation work below. Do not merge unless asked.
 - Candidate **A** is the site and is served at `/` (`src/pages/index.astro`). The candidate index, switcher and Candidates B and C have been removed; `/candidate-a` and `/candidate-c` redirect to `/` (`astro.config.mjs`).
+- Hosting: GitHub Pages at https://shravankumargulvadi.github.io/company_website/, deployed by `.github/workflows/deploy.yml` on push to `main`. `astro.config.mjs` sets `base: '/company_website'`, so use `import.meta.env.BASE_URL` for any absolute asset path; switch `base` to `'/'` when the custom domain arrives.
 - C's bird's-eye zoom lives on inside the page as `src/components/candidate-a/forceScene.ts`.
 
 ## Stack
 - Astro 5 (static), TypeScript strict, plain CSS, GSAP + ScrollTrigger, vanilla Three.js (lazy-loaded), Canvas 2D.
 - Node via nvm: **run `source ~/.nvm/nvm.sh` before any npm/node command.**
-- Commands: `npm run dev` (port 4321), `npm run check`, `npm run build`. Both check and build must pass before pushing.
+- Commands: `npm run dev` (http://localhost:4321/company_website/), `npm run check`, `npm run build`. Both check and build must pass before pushing.
 - If the browser shows 504 "Outdated Optimize Dep", restart the dev server with `npx astro dev --port 4321 --host --force`.
 - Don't `pkill -f "astro dev"` in the same shell command as other work: it kills that shell too.
 
@@ -76,7 +77,7 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
 ## Design history / founder preferences
 - The founder gives detailed briefs and expects clean, faithful implementation. Ask when a request is ambiguous; for example, his words once pointed at one section while his screenshot showed another.
 - When given a visual reference, match it closely rather than reinterpreting it. But taste can swing back: he once rolled the underground map back to its first blocky orange version. Keep each visual iteration in its own commit so it can be reverted.
-- The reference video `reference_material/sample_cave_passage.mp4` is inspiration only. Never embed or ship it.
+- The reference video `reference_material/sample_cave_passage.mp4` is inspiration only and is git-ignored (the repo is public). Never commit, embed or ship it.
 - Copy: short and concrete. Avoid "AI-powered", "next generation", "revolutionary" and similar.
 - Every animation must communicate an idea.
 
