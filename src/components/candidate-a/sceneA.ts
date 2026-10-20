@@ -674,16 +674,21 @@ export class EyesScene {
     return poseAt(this.mainPath, this.mainPhase);
   }
 
-  /** Screen positions for HTML callouts, following the rendered camera and surface. */
-  annotationAnchors(kind: 'perception' | 'belief' | 'risk') {
+  private annotationFeature?: { kind: 'perception' | 'belief' | 'risk'; u: number; v: number };
+
+  /** Keep one terrain feature selected while the stationary-page callout is visible. */
+  annotationAnchor(kind: 'perception' | 'belief' | 'risk', refresh = false) {
     const width = this.canvas.clientWidth, height = this.canvas.clientHeight;
     const project = (u: number, v: number, lift = 0.02) => {
       const [x, z] = toXZ(u, v);
       const p = new THREE.Vector3(x, this.groundY(u, v) + lift, z).project(this.camera);
       return { x: (p.x + 1) * width / 2, y: (1 - p.y) * height / 2, visible: p.z > -1 && p.z < 1 && Math.abs(p.x) < 0.94 && Math.abs(p.y) < 0.88 };
     };
+    if (!refresh && this.annotationFeature?.kind === kind) {
+      return project(this.annotationFeature.u, this.annotationFeature.v);
+    }
     const robot = this.mainPose();
-    let feature = project(robot.u + 0.04, robot.v), score = -Infinity;
+    let feature = { u: robot.u + 0.04, v: robot.v }, score = -Infinity;
     for (let i = -5; i <= 5; i++) for (let j = -5; j <= 5; j++) {
       const u = robot.u + i * 0.025, v = robot.v + j * 0.025;
       const distance = Math.hypot(i, j) * 0.025 * EXTENT;
@@ -696,9 +701,10 @@ export class EyesScene {
       const value = kind === 'risk' ? sample(this.hazH, this.world.size, u, v) * 2
         : kind === 'belief' ? this.knowledge.get(u, v) - Math.abs(contour - Math.round(contour))
         : 1 - Math.abs(distance - 0.6);
-      if (value + position > score) { score = value + position; feature = p; }
+      if (value + position > score) { score = value + position; feature = { u, v }; }
     }
-    return { robot: project(robot.u, robot.v, 0.1), feature };
+    this.annotationFeature = { kind, ...feature };
+    return project(feature.u, feature.v);
   }
 
   groundY(u: number, v: number) {

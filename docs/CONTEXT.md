@@ -40,7 +40,7 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
 1. **Hero:** "Deterrence through autonomy." A cursor lens shows the machine's view of the terrain.
 2. **01 The shift**, then **02 A different world** (structured vs contested).
 3. **Reason** (sticky rail): Reality → Perception → Belief → Risk → Decision, all on one 3D terrain with a UGV.
-   - Plain-language callouts point to the robot, sensor returns, mapped understanding and raised risk peaks. Their anchors are projected from the live 3D camera.
+   - Plain-language callouts point to sensor returns, mapped understanding and raised risk peaks; there is no robot callout. They hide immediately on scroll/resize, then reappear after a 450 ms pause once scene interpolation settles. One terrain feature stays selected until movement resumes; its anchor is projected from the live camera.
    - At *Risk* the terrain lifts into a cost field (`field` state). Height is the combined risk; colour shows the source.
    - Colours: terrain amber, ambiguous sensing violet, EW red. The legend sits in the rail.
    - The fields come from `createWorld({hazards:true})`, which adds `ambiguity` and threat, and they also feed `riskAt`, so the planned path is real.

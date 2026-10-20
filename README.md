@@ -59,7 +59,7 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
   5. **09 Fieldcore OS:** under-canopy reconnaissance, fixed-wing, underground and pilot-assistance demos, see below.
   6. Closing CTA.
 - **Implementation:** vanilla Three.js with one terrain mesh and a custom shader driven by scroll keyframes (`KEYS` → `SceneState`, including `comm` and `bev` for the handoff; the lead vehicle's progress `drive` is tied linearly to scroll so it arrives at the goal smoothly). `worldA.ts` holds the shared world options, goal and Shunya OS node so the 3D and 2D views line up. If WebGL is unavailable, a Canvas 2D fallback is used.
-- **Scene annotations:** Perception, Belief and Risk show plain-language HTML callouts with SVG arrows attached to the actual projected robot, sensor-return points, mapped contours and raised risk field. Callouts follow the camera and only appear when the corresponding visual is present. No-WebGL mode keeps the explanatory rail without misleading 3D arrows.
+- **Scene annotations:** Perception, Belief and Risk show plain-language HTML callouts pointing to sensor returns, mapped contours and raised risk peaks. They hide immediately during scrolling and reappear after a 450 ms pause once the scene has settled. Each visible callout stays attached to one terrain feature. No-WebGL mode keeps the explanatory rail without misleading 3D arrows.
 - **Placeholder vs production-ready:** procedural terrain, line-art machines and proof renders are placeholders; the scroll/scene architecture, handoff and fallbacks are close to production. Tune on real GPUs and do a mobile art-direction pass before launch.
 
 ### Candidate A — Fieldcore OS chapter (Under-canopy / Fixed-wing / Underground / Pilot assistance tabs)

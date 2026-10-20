@@ -125,11 +125,9 @@ const forceCaps = [
         <div class="reason__annotations" data-scene-annotations hidden>
           <svg class="reason__arrows" data-scene-arrows aria-hidden="true">
             <defs><marker id="reason-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7" fill="none" stroke="currentColor" stroke-width="1.2" /></marker></defs>
-            <path data-scene-arrow="robot" marker-end="url(#reason-arrow)" />
             <path data-scene-arrow="feature" marker-end="url(#reason-arrow)" />
           </svg>
           <div class="reason__callout reason__callout--feature" data-scene-label="feature"><strong data-scene-label-title></strong><span data-scene-label-copy></span></div>
-          <div class="reason__callout reason__callout--robot" data-scene-label="robot"><strong>Ground robot</strong><span>Sensing its surroundings</span></div>
         </div>
       </div>
     </section>
@@ -387,10 +385,15 @@ const forceCaps = [
   const annotationSvg = annotations.querySelector<SVGSVGElement>('[data-scene-arrows]')!;
   const annotationTitle = annotations.querySelector<HTMLElement>('[data-scene-label-title]')!;
   const annotationCopy = annotations.querySelector<HTMLElement>('[data-scene-label-copy]')!;
-  const annotationItems = (['robot', 'feature'] as const).map(key => ({ key,
-    label: annotations.querySelector<HTMLElement>(`[data-scene-label="${key}"]`)!,
-    arrow: annotations.querySelector<SVGPathElement>(`[data-scene-arrow="${key}"]`)!,
-  }));
+  const annotationLabel = annotations.querySelector<HTMLElement>('[data-scene-label="feature"]')!;
+  const annotationArrow = annotations.querySelector<SVGPathElement>('[data-scene-arrow="feature"]')!;
+  let annotationIdleAt = performance.now() + 450;
+  const hideAnnotations = () => {
+    annotations.hidden = true;
+    annotationIdleAt = performance.now() + 450;
+  };
+  window.addEventListener('scroll', hideAnnotations, { passive: true });
+  window.addEventListener('resize', hideAnnotations, { passive: true });
 
   function sectionProgress(name: string) {
     const el = sections.get(name)!;
@@ -408,29 +411,27 @@ const forceCaps = [
     railFill.style.transform = `scaleY(${p})`;
   }
 
-  function updateAnnotations(s: SceneState, scene: import('../components/candidate-a/sceneA').EyesScene) {
+  function updateAnnotations(s: SceneState, scene: import('../components/candidate-a/sceneA').EyesScene, stationary: boolean) {
+    const opening = annotations.hidden;
     const bounds = sections.get('reason')!.getBoundingClientRect();
     const kind = reasonStage === 1 ? 'perception' : reasonStage === 2 ? 'belief' : 'risk';
     const ready = reasonStage === 1 ? s.points > 0.25 : reasonStage === 2 ? s.belief > 0.25 : s.field > 0.3;
-    annotations.hidden = reasonStage < 1 || reasonStage > 3 || bounds.top > 0 || bounds.bottom < window.innerHeight || !ready;
+    annotations.hidden = !stationary || reasonStage < 1 || reasonStage > 3 || bounds.top > 0 || bounds.bottom < window.innerHeight || !ready;
     if (annotations.hidden) return;
     const copy = kind === 'perception' ? ['Sensor measurements', 'These points are returns from the robot’s sensors.']
       : kind === 'belief' ? ['The robot’s understanding', 'Lit contours show the surroundings it has mapped.']
       : ['Taller peaks mean higher risk', 'Raised areas show where movement is more risky.'];
     annotationTitle.textContent = copy[0]; annotationCopy.textContent = copy[1];
     annotationSvg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
-    const anchors = scene.annotationAnchors(kind);
-    annotationItems.forEach(({ key, label, arrow }) => {
-      const target = anchors[key];
-      label.hidden = !target.visible;
-      arrow.style.visibility = target.visible ? 'visible' : 'hidden';
-      if (!target.visible) return;
-      const box = label.getBoundingClientRect();
-      const x = target.x < box.left ? box.left : target.x > box.right ? box.right : (box.left + box.right) / 2;
-      const y = target.x >= box.left && target.x <= box.right ? (target.y < box.top ? box.top : box.bottom) : box.top + box.height / 2;
-      const mid = (x + target.x) / 2;
-      arrow.setAttribute('d', `M${x.toFixed(1)},${y.toFixed(1)} L${mid.toFixed(1)},${y.toFixed(1)} L${target.x.toFixed(1)},${target.y.toFixed(1)}`);
-    });
+    const target = scene.annotationAnchor(kind, opening);
+    annotationLabel.hidden = !target.visible;
+    annotationArrow.style.visibility = target.visible ? 'visible' : 'hidden';
+    if (!target.visible) return;
+    const box = annotationLabel.getBoundingClientRect();
+    const x = target.x < box.left ? box.left : target.x > box.right ? box.right : (box.left + box.right) / 2;
+    const y = target.x >= box.left && target.x <= box.right ? (target.y < box.top ? box.top : box.bottom) : box.top + box.height / 2;
+    const mid = (x + target.x) / 2;
+    annotationArrow.setAttribute('d', `M${x.toFixed(1)},${y.toFixed(1)} L${mid.toFixed(1)},${y.toFixed(1)} L${target.x.toFixed(1)},${target.y.toFixed(1)}`);
   }
 
   /* Bird's-eye chapter: a fixed Canvas 2D layer that takes over from the 3D view
@@ -867,9 +868,11 @@ const forceCaps = [
       last = now;
       const target = stateAt(window.scrollY);
       const k = reduced ? 1 : 1 - Math.exp(-dt * 6);
+      let stationary = now >= annotationIdleAt;
       for (const key in target) {
         const kk = key as keyof SceneState;
         cur[kk] += (target[kk] - cur[kk]) * k;
+        if (Math.abs(target[kk] - cur[kk]) > 0.003) stationary = false;
       }
       updateUI(cur);
       const covered = forceOpacity > 0.999 || coverers.some((el) => {
@@ -878,7 +881,7 @@ const forceCaps = [
       });
       if (!covered && !document.hidden) {
         scene.frame(dt, cur);
-        updateAnnotations(cur, scene);
+        updateAnnotations(cur, scene, stationary);
         if (first) {
           canvas.classList.add('is-ready');
           first = false;
@@ -1052,7 +1055,6 @@ const forceCaps = [
   .reason__callout strong { color: var(--fg); font-weight: 500; }
   .reason__callout span { color: var(--fg-dim); }
   .reason__callout--feature { top: 29%; right: var(--pad); }
-  .reason__callout--robot { top: 69%; right: 13%; }
   .rail {
     position: relative;
     align-self: end;
@@ -1730,7 +1732,6 @@ const forceCaps = [
   @media (max-width: 760px) {
     .reason__callout { max-width: 185px; padding: 8px 10px; gap: 3px; font-size: 10px; }
     .reason__callout--feature { top: 33%; right: var(--pad); }
-    .reason__callout--robot { top: 46%; right: auto; left: var(--pad); }
     .vignette {
       background: linear-gradient(0deg, rgba(6, 7, 8, 0.9) 0%, rgba(6, 7, 8, 0.3) 60%, rgba(6, 7, 8, 0.4) 100%);
     }
