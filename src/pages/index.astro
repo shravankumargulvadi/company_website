@@ -191,7 +191,7 @@ const forceCaps = [
         <canvas id="a-deep" class="deep__gl" aria-label="The machine's camera view of a dark passage beside the 2.5D risk map it builds while driving" role="img" hidden></canvas>
         <canvas id="a-deep-2d" class="deep__gl" hidden></canvas>
         <canvas id="a-air" class="deep__gl" aria-label="Chase view of a fixed-wing machine flying a canyon beside its risk map" role="img" hidden></canvas>
-        <canvas id="a-pilot" class="deep__gl" aria-label="Low-light camera beneath the aircraft near its landing gear, beside a terrain risk map assessing many sampled landing trajectories" role="img" hidden></canvas>
+        <canvas id="a-pilot" class="deep__gl" aria-label="Low-light camera beneath the aircraft near its landing gear, beside a terrain risk map comparing landing approaches" role="img" hidden></canvas>
         <div class="deep__shade" aria-hidden="true"></div>
         <p class="deep__tag deep__tag--r mono">Observed terrain · route assessment</p>
         <p class="deep__route deep__route--direct mono" data-route="direct" aria-hidden="true">Direct · <b data-len="direct">–</b> m · drop · high risk</p>
@@ -228,9 +228,9 @@ const forceCaps = [
           <p class="deep__pilot-note">Observed hazards · route recommendation for the ground team</p>
         </aside>
         <p class="deep__pilot-label mono" data-pilot-label>Gear camera · low visibility</p>
-        <aside class="deep__pilot mono" data-pilot-panel hidden aria-label="Landing trajectory assessment">
+        <aside class="deep__pilot mono" data-pilot-panel hidden aria-label="Landing approach assessment">
           <p class="deep__pilot-status" data-pilot-status>Assessing landing terrain</p>
-          <p class="deep__pilot-key" data-pilot-sampling>Sampled trajectories · weighted assessment</p>
+          <p class="deep__pilot-key" data-pilot-sampling>3 approaches compared</p>
           <ol>
             {['ridge', 'rough', 'clearing'].map((id) => (
               <li data-landing-route={id}>
@@ -641,7 +641,6 @@ const forceCaps = [
     const trajectoryCount = lowPower ? 64 : 128;
     const pilotPanel = deepSec.querySelector<HTMLElement>('[data-pilot-panel]')!;
     const pilotStatus = deepSec.querySelector<HTMLElement>('[data-pilot-status]')!;
-    deepSec.querySelector('[data-pilot-sampling]')!.textContent = `${trajectoryCount} sampled trajectories · 3 approach corridors`;
     const landingRows = assessment.routes.map(route => {
       const row = deepSec.querySelector<HTMLElement>(`[data-landing-route="${route.id}"]`)!;
       row.querySelector('[data-landing-name]')!.textContent = route.name;
@@ -652,7 +651,7 @@ const forceCaps = [
       const v = landingState(sp);
       pilotStatus.textContent = v.rollout > 0.3 ? 'Touchdown · guidance complete'
         : v.decided > 0.5 ? 'Lowest-risk approach · recommended'
-        : v.compare > 0.5 ? 'Weighing sampled landing trajectories' : 'Assessing terrain through haze';
+        : v.compare > 0.5 ? 'Judging each approach' : 'Assessing terrain through haze';
       landingRows.forEach(({ route, row, score, bar }) => {
         const assessed = v.compare > 0.5;
         const chosen = v.decided > 0.5 && route.id === assessment.best.id;
@@ -720,7 +719,7 @@ const forceCaps = [
       deepSec.querySelector('[data-application-title]')!.textContent = `Application · ${
         { forest: 'under-canopy reconnaissance', air: 'fixed-wing under radar', ground: 'GPS-denied underground', pilot: 'manned pilot assistance' }[t]}`;
       deepSec.querySelector('.deep__tag--r')!.textContent = t === 'forest' ? 'Observed terrain · route assessment'
-        : t === 'pilot' ? 'Terrain risk · trajectory assessment' : 'Belief · risk map';
+        : t === 'pilot' ? 'Terrain risk · approach options' : 'Belief · risk map';
       if (t === 'forest' && !forestLoading) {
         forestLoading = (hasAir
           ? import('../components/candidate-a/forestScene').then(({ ForestScene }) => new ForestScene(forestCanvas, { lowPower, reducedMotion: reduced, model: recon }))
