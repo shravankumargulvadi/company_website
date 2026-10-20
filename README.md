@@ -71,7 +71,7 @@ Inspired by the reference risk-estimation capture in `reference_material/` (it i
 
 ## Shared placeholders (replace before launch)
 
-- `src/config/site.ts`: shared company name (`Rta Systems`) and wordmark (`RTA SYSTEMS`); contact email (`contact@example.com`) is still a placeholder.
+- `src/config/site.ts`: shared company name (`Rta Systems`) and wordmark (`RTA SYSTEMS`); `contactFormKey` is the Web3Forms access key behind the contact form (`src/components/shared/ContactDialog.astro`); the Contact, Partner with us and Join the team buttons open that form, and no email address is shown on the site.
 - `src/config/proof.ts` and `src/components/shared/ProofReel.astro`: proof items currently render procedural Canvas simulations labelled *"Placeholder — replace with capture"*. Put real MP4/WebM clips in `public/assets/proof/` and set `src` on each item.
 - `public/favicon.svg`: temporary mark.
 - Pages are marked `noindex` in `src/layouts/Base.astro`.

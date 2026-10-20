@@ -87,7 +87,7 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
 - The deterrence section's backdrop is very dark.
 - Mobile was checked only partly, at 390×844 earlier. The tabs and deterrence section are unchecked on mobile.
 - The no-WebGL fallback has not been re-checked; the Air tab is hidden there. Real-GPU performance is unmeasured; everything was tested with software WebGL.
-- Placeholders: contact email in `src/config/site.ts`, procedural terrain, line-art glyphs. The company name is Rta Systems.
+- Placeholders: contact form key (`contactFormKey` in `src/config/site.ts`, Web3Forms; the form shows a not-available message while it is empty), procedural terrain, line-art glyphs. The company name is Rta Systems.
 - Current environment has no browser connected to the computer-use tool; visual screenshots cannot be claimed from the current run. Model, geometry, build and TypeScript checks are available. The documented `~/.nvm/nvm.sh` is also absent here; use installed Node when that startup file is unavailable.
 
 ## Verification tips

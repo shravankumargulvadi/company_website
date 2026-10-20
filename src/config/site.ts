@@ -4,5 +4,6 @@ export const site = {
   wordmark: 'RTA SYSTEMS',
   tagline: 'Deterrence through autonomy.',
   description: 'Building autonomous machines for the most difficult environments.',
-  contactEmail: 'contact@example.com',
+  /** Web3Forms access key; messages are forwarded to the inbox registered with it. Safe to publish. */
+  contactFormKey: '',
 };

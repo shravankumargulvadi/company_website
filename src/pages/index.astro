@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import SiteNav from '../components/shared/SiteNav.astro';
 import SiteFooter from '../components/shared/SiteFooter.astro';
+import ContactDialog from '../components/shared/ContactDialog.astro';
 import { site } from '../config/site';
 
 const stages = [
@@ -272,14 +273,15 @@ const forceCaps = [
           <h2 class="display">Deterrence<br /><em>through autonomy.</em></h2>
           <p class="lede">Building the autonomy layer for machines operating where the world is uncertain.</p>
           <div class="ctas">
-            <a class="btn" href={`mailto:${site.contactEmail}?subject=Partnership`}>Partner with us</a>
-            <a class="btn btn--ghost" href={`mailto:${site.contactEmail}?subject=Careers`}>Join the team</a>
+            <a class="btn" href="#contact" data-contact="Partnership">Partner with us</a>
+            <a class="btn btn--ghost" href="#contact" data-contact="Careers">Join the team</a>
           </div>
         </div>
       </div>
     </section>
   </main>
   <div class="foot"><SiteFooter /></div>
+  <ContactDialog />
 </Base>
 
 <script>
