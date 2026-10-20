@@ -23,6 +23,18 @@ const airBeats = [
   { h: 'It changes course.', p: 'The other canyon keeps terrain between it and the radar.' },
   { h: 'Same Fieldcore OS. Different body.', p: 'On the ground or in the air, it weighs terrain, the unknown and the adversary.' },
 ];
+const forestBeats = [
+  { h: 'Scout the route before the team moves.', p: 'A quadrotor scouts ahead of a ground team, detects obstacles, hazards and choke points, and recommends the best corridor through dense forest.' },
+  { h: 'The shortest way is not the safest.', p: 'A narrow passage closes around fallen timber. The alternative crosses a steep drainage cut.' },
+  { h: 'Find the corridor. Then scout it.', p: 'The quadrotor checks the eastern route beneath the canopy, building a picture of clearance, terrain and the ground still unseen.' },
+  { h: 'A route the team can act on.', p: 'The scouted corridor is sent back to the ground team, with hazards marked and the lower-risk route highlighted.' },
+];
+const pilotBeats = [
+  { h: 'Limited visibility. Uneven ground.', p: 'A camera beneath the fuselage reveals the landing terrain through haze. The pilot stays in command.' },
+  { h: 'Many trajectories. One recommendation.', p: 'Sampled approaches are weighed against terrain clearance, surface roughness and the cost of each manoeuvre.' },
+  { h: 'A safer line into the clearing.', p: 'The lowest-risk approach is highlighted. The alternatives stay visible so the pilot can compare.' },
+  { h: 'Guidance, all the way to touchdown.', p: 'The aircraft follows the recommended approach onto a level clearing within the uneven terrain.' },
+];
 const deterSteps = [
   { h: 'Autonomous capabilities at scale.', p: 'Fieldcore OS on every machine. Shunya OS across the force.' },
   { h: 'Defensive and offensive superiority.', p: 'Machines that see, decide and act where people cannot, on defence or in attack.' },
@@ -52,10 +64,9 @@ const forceCaps = [
     <section class="sec" data-sec="hero" style="--h: 150vh">
       <div class="sticky">
         <div class="panel panel--hero" data-hero>
-          <p class="eyebrow">Autonomy for contested environments</p>
           <h1 class="display">Deterrence<br /><em>through autonomy.</em></h1>
           <p class="lede">{site.description}</p>
-          <p class="hint mono"><span class="hint__lens"></span>Move to see what the machine sees</p>
+          <p class="hint mono"><span class="hint__lens"></span>Scroll to see what we’re building</p>
         </div>
       </div>
     </section>
@@ -165,13 +176,15 @@ const forceCaps = [
       </div>
     </section>
 
-    <section class="deep" data-sec="deep" data-tab="air" style="--h: 680vh">
+    <section class="deep" data-sec="deep" data-tab="forest" style="--h: 2420vh">
       <div class="deep__sticky">
-        <canvas id="a-deep" class="deep__gl" aria-label="The machine's camera view of a dark passage beside the 2.5D risk map it builds while driving" role="img"></canvas>
+        <canvas id="a-forest" class="deep__gl" aria-label="A quadrotor scouts beneath dense forest canopy while an observation map reveals obstacles, hazards, choke points and a recommended corridor for a waiting ground team" role="img"></canvas>
+        <canvas id="a-deep" class="deep__gl" aria-label="The machine's camera view of a dark passage beside the 2.5D risk map it builds while driving" role="img" hidden></canvas>
         <canvas id="a-deep-2d" class="deep__gl" hidden></canvas>
         <canvas id="a-air" class="deep__gl" aria-label="Chase view of a fixed-wing machine flying a canyon beside its risk map" role="img" hidden></canvas>
+        <canvas id="a-pilot" class="deep__gl" aria-label="Low-light camera beneath the aircraft near its landing gear, beside a terrain risk map assessing many sampled landing trajectories" role="img" hidden></canvas>
         <div class="deep__shade" aria-hidden="true"></div>
-        <p class="deep__tag deep__tag--r mono">Belief · risk map</p>
+        <p class="deep__tag deep__tag--r mono">Observed terrain · route assessment</p>
         <p class="deep__route deep__route--direct mono" data-route="direct" aria-hidden="true">Direct · <b data-len="direct">–</b> m · drop · high risk</p>
         <p class="deep__air deep__route--direct mono" data-air="radar" aria-hidden="true">EW · radar detected</p>
         <p class="deep__air deep__route--direct mono" data-air="planned" aria-hidden="true">Planned · exposed · high risk</p>
@@ -179,13 +192,45 @@ const forceCaps = [
         <p class="deep__route deep__route--detour mono" data-route="detour" aria-hidden="true">Detour · <b data-len="detour">–</b> m · low risk</p>
         <div class="deep__switch mono" role="tablist" aria-label="Fieldcore OS demos">
           <span class="deep__badge">In progress</span>
-          <button type="button" role="tab" data-tab="air" aria-selected="true">Air · fixed-wing</button>
-          <button type="button" role="tab" data-tab="ground" aria-selected="false">Ground · underground</button>
+          <button type="button" role="tab" data-tab="forest" aria-selected="true">Under-canopy</button>
+          <button type="button" role="tab" data-tab="air" aria-selected="false">Fixed-wing</button>
+          <button type="button" role="tab" data-tab="ground" aria-selected="false">Underground</button>
+          <button type="button" role="tab" data-tab="pilot" aria-selected="false">Pilot assistance</button>
         </div>
+        <p class="deep__pilot-label mono" data-recon-label>Under-canopy route reconnaissance</p>
+        <aside class="deep__pilot deep__recon mono" data-recon-panel hidden aria-label="Forest corridor reconnaissance assessment">
+          <p class="deep__pilot-status" data-recon-status>Scout launched · ground team holding</p>
+          <p class="deep__pilot-key" data-recon-summary>Surveying the route ahead</p>
+          <ol>
+            {['direct', 'drainage', 'flank'].map((id) => (
+              <li data-recon-route={id}>
+                <div><span data-recon-name></span><b data-recon-score>Unobserved</b></div>
+                <span class="deep__pilot-bar"><i data-recon-bar></i></span>
+                <small data-recon-reason></small>
+              </li>
+            ))}
+          </ol>
+          <p class="deep__pilot-note">Observed hazards · route recommendation for the ground team</p>
+        </aside>
+        <p class="deep__pilot-label mono" data-pilot-label>Gear camera · low visibility</p>
+        <aside class="deep__pilot mono" data-pilot-panel hidden aria-label="Landing trajectory assessment">
+          <p class="deep__pilot-status" data-pilot-status>Assessing landing terrain</p>
+          <p class="deep__pilot-key" data-pilot-sampling>Sampled trajectories · weighted assessment</p>
+          <ol>
+            {['ridge', 'rough', 'clearing'].map((id) => (
+              <li data-landing-route={id}>
+                <div><span data-landing-name></span><b data-landing-score>–</b></div>
+                <span class="deep__pilot-bar"><i data-landing-bar></i></span>
+                <small data-landing-reason></small>
+              </li>
+            ))}
+          </ol>
+          <p class="deep__pilot-note">Illustrative assessment · pilot retains control</p>
+        </aside>
         <div class="deep__copy">
           <p class="eyebrow">09 — Fieldcore OS</p>
-          {[['ground', beats], ['air', airBeats]].map(([k, list]) => (
-            <ol class="deep__beats" data-beats={k as string} hidden={k === 'ground'}>
+          {[['forest', forestBeats], ['air', airBeats], ['ground', beats], ['pilot', pilotBeats]].map(([k, list]) => (
+            <ol class="deep__beats" data-beats={k as string} hidden={k !== 'forest'}>
               {(list as typeof beats).map((b, i) => (
                 <li data-beat={i}>
                   <h2 class="headline">{b.h}</h2>
@@ -388,6 +433,7 @@ const forceCaps = [
     const HOLD = 0.5;
     const scene = new ForceScene(forceCanvas, {
       lowPower,
+      markerScale: 1.25,
       softEdges: true,
       world: createWorld(A_WORLD),
       start: { ...A_GOAL, heading: -0.6 },
@@ -424,13 +470,25 @@ const forceCaps = [
     });
   }, '600px');
 
-  /* Underground chapter: its own canvas, booted when the section approaches. */
+  /* Fieldcore demos: forest reconnaissance, fixed-wing, underground, pilot assistance. */
   const deepSec = sections.get('deep')!;
   whenNear(deepSec, async () => {
-    const { createPassage, passageStats } = await import('../lib/passage');
+    const [{ createPassage, passageStats }, { createLandingAssessment, landingState }, forestModel] = await Promise.all([
+      import('../lib/passage'), import('../lib/landing'), import('../lib/forestRecon'),
+    ]);
     const lowPower = window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
     const P = createPassage({ res: lowPower ? 160 : 224 });
-    let tab: 'ground' | 'air' = 'air';
+    type DemoTab = 'forest' | 'air' | 'ground' | 'pilot';
+    let tab: DemoTab = 'forest';
+    const hasAir = hasWebGL();
+    const demos: DemoTab[] = hasAir ? ['forest', 'air', 'ground', 'pilot'] : ['forest', 'ground', 'pilot'];
+    if (!hasAir) deepSec.style.setProperty('--h', '1840vh');
+    const demoProgress = (demo = tab) => {
+      const p = sectionProgress('deep');
+      return clamp(p * demos.length - demos.indexOf(demo));
+    };
+    // Ignore floating-point noise at the exact boundary between chapters.
+    const tabAtScroll = () => demos[Math.min(demos.length - 1, Math.floor(sectionProgress('deep') * demos.length + 1e-9))];
     const beatLists = Object.fromEntries(
       [...deepSec.querySelectorAll<HTMLElement>('[data-beats]')].map((ol) => [ol.dataset.beats!, ol]),
     );
@@ -449,7 +507,7 @@ const forceCaps = [
     /* to the fork, a few metres down the direct branch, hold while the drop resolves,
        reverse out, then the detour */
     const target = () => {
-      const p = sectionProgress('deep');
+      const p = demoProgress('ground');
       if (p < 0.2) return 2 + range(p, 0.03, 0.2) * (sJ - 2);
       if (p < 0.32) return sJ + smooth(range(p, 0.2, 0.32)) * (P.probe - sJ);
       if (p < 0.44) return P.probe;
@@ -457,7 +515,7 @@ const forceCaps = [
       return P.back + range(p, 0.54, 0.95) * (sEnd - P.back);
     };
     const viewAt = () => {
-      const p = sectionProgress('deep');
+      const p = demoProgress('ground');
       return { look: 0, compare: smooth(range(p, 0.33, 0.38)), decided: smooth(range(p, 0.41, 0.45)) };
     };
     let s = target();
@@ -473,8 +531,9 @@ const forceCaps = [
     };
     const ui = (now: number) => {
       const beatEls = beatsNow();
-      const bi = Math.min(beatEls.length - 1, Math.floor(sectionProgress('deep') * beatEls.length));
+      const bi = Math.min(beatEls.length - 1, Math.floor(demoProgress() * beatEls.length));
       beatEls.forEach((el, i) => el.classList.toggle('is-active', i === bi));
+      if (tab !== 'ground') return;
       if (now - lastStat < 0.2) return;
       lastStat = now;
       const st = passageStats(P, s);
@@ -485,93 +544,220 @@ const forceCaps = [
     const step = (dt: number) => (s += (target() - s) * (reduced ? 1 : 1 - Math.exp(-dt * 5)));
 
     const gl = document.getElementById('a-deep') as HTMLCanvasElement;
-    if (hasWebGL()) {
+    const flat = document.getElementById('a-deep-2d') as HTMLCanvasElement;
+    let groundScene: import('../components/candidate-a/deepScene').DeepScene | null = null;
+    let groundMap: import('../lib/passageMap2d').PassageMap2D | null = null;
+    if (hasAir) {
       const { DeepScene } = await import('../components/candidate-a/deepScene');
-      const scene = new DeepScene(gl, P, { lowPower });
-      scene.resize();
-      window.addEventListener('resize', () => scene.resize());
+      groundScene = new DeepScene(gl, P, { lowPower });
+      groundScene.resize();
+      window.addEventListener('resize', () => groundScene?.resize());
       gl.classList.add('is-ready');
-
-      /* Air tab: a second scene on its own canvas, created on first use */
-      const airCanvas = document.getElementById('a-air') as HTMLCanvasElement;
-      const airEls = Object.fromEntries(
-        [...deepSec.querySelectorAll<HTMLElement>('[data-air]')].map((el) => [el.dataset.air!, el]),
-      ) as Record<'radar' | 'planned' | 'detour', HTMLElement>;
-      const tabs = [...deepSec.querySelectorAll<HTMLButtonElement>('[data-tab]')];
-      let air: import('../components/candidate-a/airScene').AirScene | null = null;
-      let sa = 0;
-      const airTarget = () => range(sectionProgress('deep'), 0.03, 0.95);
-      const airView = () => {
-        const p = sectionProgress('deep');
-        return { detect: smooth(range(p, 0.27, 0.34)), decided: smooth(range(p, 0.42, 0.49)) };
-      };
-      const setTab = async (t: 'ground' | 'air', restart = false) => {
-        if (restart && t !== tab) {
-          window.scrollTo({ top: deepSec.getBoundingClientRect().top + window.scrollY + 2, behavior: 'auto' });
-          s = target();
-        }
-        tab = t;
-        deepSec.dataset.tab = t;
-        tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
-        Object.entries(beatLists).forEach(([k, ol]) => (ol.hidden = k !== t));
-        if (t === 'air' && !air) {
-          const { AirScene } = await import('../components/candidate-a/airScene');
-          air = new AirScene(airCanvas, { lowPower });
-          window.addEventListener('resize', () => air?.resize());
-        }
-        if (restart || t === 'air') sa = airTarget();
-        airCanvas.hidden = t !== 'air';
-        gl.hidden = t === 'air';
-        if (t === 'air') {
-          air!.resize();
-          airCanvas.classList.add('is-ready');
-        }
-      };
-      tabs.forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab as 'ground' | 'air', true)));
-      setTab('air');
-
-      visibleLoop(deepSec, (t, dt) => {
-        if (tab === 'air' && air) {
-          sa += (airTarget() - sa) * (reduced ? 1 : 1 - Math.exp(-dt * 5));
-          const v = airView();
-          air.frame(dt, sa, v);
-          const at = air.anchors();
-          for (const k of ['radar', 'planned', 'detour'] as const) {
-            const el = airEls[k];
-            el.classList.toggle('is-on', v.detect > 0.5 && (k !== 'detour' || v.decided > 0.2));
-            el.classList.toggle('is-rejected', k === 'planned' && v.decided > 0.5);
-            el.classList.toggle('is-chosen', k === 'detour' && v.decided > 0.5);
-            el.style.transform = `translate(${at[k][0].toFixed(0)}px, ${at[k][1].toFixed(0)}px)`;
-          }
-          ui(t);
-          return;
-        }
-        step(dt);
-        const v = viewAt();
-        scene.frame(dt, s, v);
-        routes(v, scene.anchors());
-        ui(t);
-      });
     } else {
       const { PassageMap2D } = await import('../lib/passageMap2d');
-      const flat = document.getElementById('a-deep-2d') as HTMLCanvasElement;
-      gl.hidden = true;
-      flat.hidden = false;
       deepSec.classList.add('is-flat');
-      tab = 'ground';
-      deepSec.dataset.tab = 'ground';
-      Object.entries(beatLists).forEach(([k, ol]) => (ol.hidden = k !== 'ground'));
-      const view = new PassageMap2D(flat, P);
+      groundMap = new PassageMap2D(flat, P);
       flat.classList.add('is-ready');
-      visibleLoop(deepSec, (t, dt) => {
-        fitCanvas(flat, 1.5);
-        step(dt);
-        const v = viewAt();
-        view.draw(s, t, v.compare);
-        routes(v);
-        ui(t);
-      });
     }
+
+    const airCanvas = document.getElementById('a-air') as HTMLCanvasElement;
+    const forestCanvas = document.getElementById('a-forest') as HTMLCanvasElement;
+    const pilotCanvas = document.getElementById('a-pilot') as HTMLCanvasElement;
+    const airEls = Object.fromEntries(
+      [...deepSec.querySelectorAll<HTMLElement>('[data-air]')].map((el) => [el.dataset.air!, el]),
+    ) as Record<'radar' | 'planned' | 'detour', HTMLElement>;
+    const tabs = [...deepSec.querySelectorAll<HTMLButtonElement>('[data-tab]')];
+    tabs.forEach(b => { b.hidden = !demos.includes(b.dataset.tab as DemoTab); });
+    let air: import('../components/candidate-a/airScene').AirScene | null = null;
+    let airLoading: Promise<void> | null = null;
+    let pilot: { resize(): void; frame(dt: number, progress: number): void } | null = null;
+    let pilotLoading: Promise<void> | null = null;
+    let forest: { resize(): void; frame(dt: number, progress: number): void } | null = null;
+    let forestLoading: Promise<void> | null = null;
+    let sa = 0;
+    let sp = 0;
+    let sf = 0;
+    const airTarget = () => range(demoProgress('air'), 0.03, 0.95);
+    const airView = () => {
+      const p = demoProgress('air');
+      return { detect: smooth(range(p, 0.27, 0.34)), decided: smooth(range(p, 0.42, 0.49)) };
+    };
+    const assessment = createLandingAssessment();
+    const trajectoryCount = lowPower ? 64 : 128;
+    const pilotPanel = deepSec.querySelector<HTMLElement>('[data-pilot-panel]')!;
+    const pilotStatus = deepSec.querySelector<HTMLElement>('[data-pilot-status]')!;
+    deepSec.querySelector('[data-pilot-sampling]')!.textContent = `${trajectoryCount} sampled trajectories · 3 approach corridors`;
+    const landingRows = assessment.routes.map(route => {
+      const row = deepSec.querySelector<HTMLElement>(`[data-landing-route="${route.id}"]`)!;
+      row.querySelector('[data-landing-name]')!.textContent = route.name;
+      row.querySelector('[data-landing-reason]')!.textContent = `${route.reason} · ${route.slope.toFixed(1)}° max slope`;
+      return { route, row, score: row.querySelector<HTMLElement>('[data-landing-score]')!, bar: row.querySelector<HTMLElement>('[data-landing-bar]')! };
+    });
+    const pilotUI = () => {
+      const v = landingState(sp);
+      pilotStatus.textContent = v.rollout > 0.3 ? 'Touchdown · guidance complete'
+        : v.decided > 0.5 ? 'Lowest-risk approach · recommended'
+        : v.compare > 0.5 ? 'Weighing sampled landing trajectories' : 'Assessing terrain through haze';
+      landingRows.forEach(({ route, row, score, bar }) => {
+        const assessed = v.compare > 0.5;
+        const chosen = v.decided > 0.5 && route.id === assessment.best.id;
+        row.classList.toggle('is-chosen', chosen);
+        row.classList.toggle('is-rejected', v.decided > 0.5 && !chosen);
+        score.textContent = assessed ? `${route.score} / 100` : 'Scanning';
+        bar.style.width = `${assessed ? route.score : 0}%`;
+      });
+    };
+    const recon = forestModel.createForestRecon();
+    const reconSamples = forestModel.forestObservationSamples(recon);
+    const reconPanel = deepSec.querySelector<HTMLElement>('[data-recon-panel]')!;
+    const reconStatus = deepSec.querySelector<HTMLElement>('[data-recon-status]')!;
+    const reconSummary = deepSec.querySelector<HTMLElement>('[data-recon-summary]')!;
+    const hazardSeen = recon.hazards.map(h => forestModel.forestObservedAt(reconSamples, h.x, h.z));
+    const reconRows = recon.routes.map(route => {
+      const row = deepSec.querySelector<HTMLElement>(`[data-recon-route="${route.id}"]`)!;
+      row.querySelector('[data-recon-name]')!.textContent = route.name;
+      return { route, row, score: row.querySelector<HTMLElement>('[data-recon-score]')!,
+        bar: row.querySelector<HTMLElement>('[data-recon-bar]')!, reason: row.querySelector<HTMLElement>('[data-recon-reason]')! };
+    });
+    const forestUI = () => {
+      const state = forestModel.forestState(sf);
+      const detected = hazardSeen.filter(at => sf >= at).length;
+      reconStatus.textContent = state.team > 0.05 ? 'Ground team moving · corridor received'
+        : state.recommended > 0.5 ? 'Scouted corridor · recommended'
+        : sf > 0.5 ? 'Scouting the eastern corridor'
+        : detected ? 'Hazards detected · assessing corridors' : 'Scout launched · ground team holding';
+      reconSummary.textContent = `${detected} hazards mapped · ${state.recommended > 0.5 ? `${recon.best.length.toFixed(0)} m corridor scouted` : 'unobserved ground stays unknown'}`;
+      reconRows.forEach(({ route, row, score, bar, reason }) => {
+        const observed = route.id === 'direct' ? sf >= Math.max(hazardSeen[0], hazardSeen[1])
+          : route.id === 'drainage' ? sf >= hazardSeen[2] : sf >= 0.8;
+        const chosen = state.recommended > 0.5 && route.id === recon.best.id;
+        row.classList.toggle('is-chosen', chosen);
+        row.classList.toggle('is-rejected', state.recommended > 0.5 && !chosen);
+        score.textContent = observed ? `${route.score} / 100` : route.id === recon.best.id && sf > 0.5 ? 'Scouting' : 'Unobserved';
+        bar.style.width = `${observed ? route.score : 0}%`;
+        reason.textContent = observed ? route.reason : 'Awaiting scout observations';
+      });
+    };
+    const setTab = (t: DemoTab) => {
+      tab = t;
+      deepSec.dataset.tab = t;
+      tabs.forEach(b => {
+        b.setAttribute('aria-selected', String(b.dataset.tab === t));
+        b.tabIndex = b.dataset.tab === t ? 0 : -1;
+      });
+      Object.entries(beatLists).forEach(([k, ol]) => { ol.hidden = k !== t; });
+      airCanvas.hidden = t !== 'air';
+      pilotCanvas.hidden = t !== 'pilot';
+      forestCanvas.hidden = t !== 'forest';
+      gl.hidden = t !== 'ground' || !hasAir;
+      flat.hidden = t !== 'ground' || hasAir;
+      pilotPanel.hidden = t !== 'pilot';
+      reconPanel.hidden = t !== 'forest';
+      deepSec.querySelector('.deep__tag--r')!.textContent = t === 'forest' ? 'Observed terrain · route assessment'
+        : t === 'pilot' ? 'Terrain risk · trajectory assessment' : 'Belief · risk map';
+      if (t === 'forest' && !forestLoading) {
+        forestLoading = (hasAir
+          ? import('../components/candidate-a/forestScene').then(({ ForestScene }) => new ForestScene(forestCanvas, { lowPower, reducedMotion: reduced, model: recon }))
+          : import('../lib/forestMap2d').then(({ ForestMap2D }) => new ForestMap2D(forestCanvas, { model: recon }))
+        ).then(scene => {
+          forest = scene;
+          window.addEventListener('resize', () => forest?.resize());
+          if (tab === 'forest') forest.resize();
+          forestCanvas.classList.add('is-ready');
+        });
+      }
+      if (t === 'air' && !airLoading) {
+        airLoading = import('../components/candidate-a/airScene').then(({ AirScene }) => {
+          air = new AirScene(airCanvas, { lowPower });
+          window.addEventListener('resize', () => air?.resize());
+          if (tab === 'air') air.resize();
+          airCanvas.classList.add('is-ready');
+        });
+      }
+      if (t === 'pilot' && !pilotLoading) {
+        pilotLoading = (hasAir
+          ? import('../components/candidate-a/landingScene').then(({ LandingScene }) => new LandingScene(pilotCanvas, { lowPower, reducedMotion: reduced }))
+          : import('../lib/landingMap2d').then(({ LandingMap2D }) => new LandingMap2D(pilotCanvas, { sampleCount: trajectoryCount }))
+        ).then(scene => {
+          pilot = scene;
+          window.addEventListener('resize', () => pilot?.resize());
+          if (tab === 'pilot') pilot.resize();
+          pilotCanvas.classList.add('is-ready');
+        });
+      }
+      s = target();
+      sa = airTarget();
+      sp = demoProgress('pilot');
+      sf = demoProgress('forest');
+      lastStat = -1;
+      if (t === 'air') air?.resize();
+      if (t === 'ground') groundScene?.resize();
+      if (t === 'pilot') { pilot?.resize(); pilotUI(); }
+      if (t === 'forest') { forest?.resize(); forestUI(); }
+    };
+    tabs.forEach(b => b.addEventListener('click', () => {
+      const next = b.dataset.tab as DemoTab;
+      if (next === tab || !demos.includes(next)) return;
+      const start = deepSec.getBoundingClientRect().top + window.scrollY;
+      const span = Math.max(1, deepSec.offsetHeight - window.innerHeight);
+      window.scrollTo({ top: start + span * demos.indexOf(next) / demos.length + 2, behavior: 'auto' });
+      setTab(next);
+    }));
+    tabs.forEach(b => b.addEventListener('keydown', event => {
+      const index = demos.indexOf(b.dataset.tab as DemoTab);
+      const next = event.key === 'ArrowRight' ? (index + 1) % demos.length
+        : event.key === 'ArrowLeft' ? (index + demos.length - 1) % demos.length
+        : event.key === 'Home' ? 0 : event.key === 'End' ? demos.length - 1 : -1;
+      if (next < 0) return;
+      event.preventDefault();
+      const button = tabs.find(t => t.dataset.tab === demos[next])!;
+      button.focus();
+      button.click();
+    }));
+    setTab(tabAtScroll());
+
+    visibleLoop(deepSec, (t, dt) => {
+      const next = tabAtScroll();
+      if (next !== tab) setTab(next);
+      ui(t);
+      if (tab === 'forest') {
+        sf += (demoProgress('forest') - sf) * (reduced ? 1 : 1 - Math.exp(-dt * 5));
+        forest?.frame(dt, sf);
+        forestUI();
+        return;
+      }
+      if (tab === 'pilot') {
+        sp += (demoProgress('pilot') - sp) * (reduced ? 1 : 1 - Math.exp(-dt * 5));
+        pilot?.frame(dt, sp);
+        pilotUI();
+        return;
+      }
+      if (tab === 'air') {
+        if (!air) return;
+        sa += (airTarget() - sa) * (reduced ? 1 : 1 - Math.exp(-dt * 5));
+        const v = airView();
+        air.frame(dt, sa, v);
+        const at = air.anchors();
+        for (const k of ['radar', 'planned', 'detour'] as const) {
+          const el = airEls[k];
+          el.classList.toggle('is-on', v.detect > 0.5 && (k !== 'detour' || v.decided > 0.2));
+          el.classList.toggle('is-rejected', k === 'planned' && v.decided > 0.5);
+          el.classList.toggle('is-chosen', k === 'detour' && v.decided > 0.5);
+          el.style.transform = `translate(${at[k][0].toFixed(0)}px, ${at[k][1].toFixed(0)}px)`;
+        }
+        return;
+      }
+      step(dt);
+      const v = viewAt();
+      if (groundScene) {
+        groundScene.frame(dt, s, v);
+        routes(v, groundScene.anchors());
+      } else if (groundMap) {
+        fitCanvas(flat, 1.5);
+        groundMap.draw(s, t, v.compare);
+        routes(v);
+      }
+    });
   }, '900px');
 
   /* Scene boot: lazy so hero text paints first. */
@@ -1103,11 +1289,10 @@ const forceCaps = [
     color: var(--fg);
   }
   .deep.is-flat .deep__route,
-  .deep.is-flat .deep__switch,
   .deep__air,
-  .deep[data-tab='air'] .deep__route,
-  .deep[data-tab='air'] .deep__hud,
-  .deep[data-tab='air'] .deep__legend {
+  .deep:not([data-tab='ground']) .deep__route,
+  .deep:not([data-tab='ground']) .deep__hud,
+  .deep:not([data-tab='ground']) .deep__legend {
     display: none;
   }
   .deep[data-tab='air'] .deep__air {
@@ -1146,6 +1331,107 @@ const forceCaps = [
   .deep__gl[hidden] {
     display: none;
   }
+  .deep__pilot-label {
+    display: none;
+    position: absolute;
+    top: 150px;
+    left: var(--pad);
+    margin: 0;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+  .deep[data-tab='pilot'] [data-pilot-label],
+  .deep[data-tab='forest'] [data-recon-label] {
+    display: block;
+  }
+  .deep[data-tab='pilot'] .deep__shade,
+  .deep[data-tab='forest'] .deep__shade {
+    background:
+      linear-gradient(90deg, transparent calc(50% - 0.5px), var(--line) calc(50% - 0.5px), var(--line) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+      linear-gradient(0deg, rgba(5, 7, 10, 0.92) 0%, transparent 44%);
+  }
+  .deep__pilot {
+    position: absolute;
+    right: var(--pad);
+    bottom: 7vh;
+    width: min(310px, calc(50% - 2 * var(--pad)));
+    padding: 18px;
+    border: 1px solid var(--line);
+    background: rgba(5, 7, 8, 0.9);
+    font-size: 10px;
+  }
+  .deep__pilot[hidden] {
+    display: none;
+  }
+  .deep__pilot-status {
+    color: var(--fg);
+    font-size: 11px;
+    line-height: 1.5;
+    margin: 0 0 8px;
+  }
+  .deep__pilot-key,
+  .deep__pilot-note {
+    margin: 0;
+    color: var(--fg-faint);
+    font-size: 9px;
+    line-height: 1.5;
+  }
+  .deep__pilot ol {
+    display: grid;
+    gap: 16px;
+    list-style: none;
+    margin: 18px 0;
+    padding: 0;
+  }
+  .deep__pilot li {
+    color: #ffbd64;
+    transition: opacity 0.3s, color 0.3s;
+  }
+  .deep__pilot li:first-child {
+    color: #ff775a;
+  }
+  .deep__pilot li:last-child {
+    color: #a8e6ff;
+  }
+  .deep__pilot li > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .deep__pilot b {
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .deep__pilot small {
+    font-size: 9px;
+    line-height: 1.5;
+  }
+  .deep__pilot-bar {
+    display: block;
+    height: 3px;
+    margin: 7px 0;
+    background: rgba(235, 233, 226, 0.1);
+  }
+  .deep__pilot-bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: currentColor;
+    transition: width 0.4s;
+  }
+  .deep__pilot li:global(.is-rejected) {
+    opacity: 0.5;
+  }
+  .deep__pilot li:global(.is-chosen)::after {
+    content: 'Recommended';
+    display: block;
+    margin-top: 4px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
   .deep__tag--r {
     top: 150px;
   }
@@ -1167,6 +1453,7 @@ const forceCaps = [
     border-radius: 999px;
     pointer-events: auto;
     white-space: nowrap;
+    max-width: calc(100% - 2 * var(--pad));
   }
   .deep__badge {
     font-size: 10px;
@@ -1276,10 +1563,10 @@ const forceCaps = [
     max-width: 42em;
     text-wrap: pretty;
   }
-  .deep.is-flat .deep__tag--r {
+  .deep.is-flat[data-tab='ground'] .deep__tag--r {
     display: none;
   }
-  .deep.is-flat .deep__shade {
+  .deep.is-flat[data-tab='ground'] .deep__shade {
     background: linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%);
   }
 
@@ -1294,6 +1581,17 @@ const forceCaps = [
     position: relative;
     z-index: 1;
     background: var(--bg);
+  }
+
+  @media (min-width: 761px) and (max-width: 1000px) {
+    .deep__badge {
+      display: none;
+    }
+    .deep__switch button {
+      font-size: 10px;
+      padding: 10px 12px;
+      letter-spacing: 0.08em;
+    }
   }
 
   @media (max-width: 760px) {
@@ -1353,6 +1651,90 @@ const forceCaps = [
     .deep__copy {
       width: calc(100% - 2 * var(--pad));
       bottom: calc(5vh + 64px);
+    }
+    .deep__switch {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: calc(100% - 2 * var(--pad));
+      gap: 4px;
+      padding: 4px;
+      border-radius: 20px;
+    }
+    .deep__badge {
+      display: none;
+    }
+    .deep__switch button {
+      flex: 1;
+      padding: 9px 5px;
+      font-size: 9px;
+      letter-spacing: 0.04em;
+    }
+    .deep__switch button[hidden] {
+      display: none;
+    }
+    .deep.is-flat .deep__switch button[data-tab='pilot'] {
+      grid-column: 1 / -1;
+    }
+    .deep__pilot-label {
+      top: 170px;
+      font-size: 9px;
+    }
+    .deep[data-tab='pilot'] .deep__shade,
+    .deep[data-tab='forest'] .deep__shade {
+      background:
+        linear-gradient(0deg, transparent calc(50% - 0.5px), var(--line) calc(50% - 0.5px), var(--line) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+        linear-gradient(0deg, rgba(5, 7, 10, 0.92) 0%, transparent 34%);
+    }
+    .deep__pilot {
+      top: calc(50% + 42px);
+      left: var(--pad);
+      right: var(--pad);
+      bottom: auto;
+      width: auto;
+      padding: 10px;
+    }
+    .deep__pilot ol {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+      margin: 9px 0 0;
+    }
+    .deep__pilot li > div {
+      flex-direction: column;
+      gap: 4px;
+      font-size: 9px;
+    }
+    .deep__pilot small,
+    .deep__pilot-note,
+    .deep__pilot-key {
+      display: none;
+    }
+    .deep__pilot-status {
+      font-size: 10px;
+      margin: 0;
+    }
+    .deep[data-tab='pilot'] .deep__copy {
+      bottom: 24px;
+    }
+    .deep[data-tab='forest'] .deep__copy {
+      bottom: 24px;
+      gap: 12px;
+    }
+    .deep[data-tab='forest'] .deep__copy .headline {
+      font-size: clamp(22px, 5vw, 30px);
+    }
+    .deep[data-tab='forest'] .deep__copy .lede {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .deep[data-tab='forest'] .deep__beats li {
+      gap: 8px;
+    }
+    .deep[data-tab='pilot'] .deep__copy .headline {
+      font-size: clamp(23px, 5.5vw, 32px);
+    }
+    .deep[data-tab='pilot'] .deep__copy .lede {
+      font-size: 13px;
+      line-height: 1.45;
     }
     .deep__legend {
       display: none;

@@ -1,4 +1,6 @@
-# Company website — exploration prototypes
+# Rta Systems — website exploration prototypes
+
+The company name comes from Sanskrit **Ṛta (ऋत)**, the principle of cosmic order or truth and a Vedic antecedent of dharma. The brand uses **Rta Systems**, with **RTA SYSTEMS** as its wordmark.
 
 One-page website prototypes for the company thesis **"Deterrence through autonomy."** **Candidate A is the primary direction** and now absorbs Candidate C's bird's-eye force chapter. Candidate B has been dropped. Candidate C stays up as a reference while its pieces move into A.
 
@@ -16,6 +18,7 @@ npm install
 npm run dev       # http://localhost:4321
 npm run build     # static output in dist/
 npm run check     # astro + TypeScript diagnostics
+npm test          # reconnaissance, landing assessment and motion checks
 ```
 
 Requires Node 18.17+ (developed on Node 24).
@@ -53,18 +56,20 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
   2. **Reality → Perception → Belief → Risk → Decision** on one 3D terrain with a ground vehicle. At *Risk* the terrain lifts into a cost field: height is the combined risk, colour the source (terrain amber, ambiguous sensing violet, electronic warfare red). These fields also feed `riskAt`, so the planned path really avoids them.
   3. **03 Connected:** the vehicle drives to its objective and stops, a comms link arcs from it towards the Shunya OS node, and the camera rises to straight top-down.
   4. **04–07, bird's-eye force chapter:** once the 3D camera is top-down, a fixed Canvas 2D layer (Candidate C's `ForceScene`, run on A's world with the vehicle at the same spot and scale) cross-fades in and keeps zooming out: **Fieldcore OS** (the autonomy on every machine, many bodies), autonomous teams, human–machine teaming, and **Shunya OS**, the mission intelligence layer above it (swarm orchestration, AI-assisted mission planning, fleet management).
-  5. **08 Fieldcore OS:** two tabs, see below.
+  5. **09 Fieldcore OS:** under-canopy reconnaissance, fixed-wing, underground and pilot-assistance demos, see below.
   6. In development (proof reel), closing CTA.
 - **Implementation:** vanilla Three.js with one terrain mesh and a custom shader driven by scroll keyframes (`KEYS` → `SceneState`, including `comm` and `bev` for the handoff; the lead vehicle's progress `drive` is tied linearly to scroll so it arrives at the goal smoothly). `worldA.ts` holds the shared world options, goal and Shunya OS node so the 3D and 2D views line up. If WebGL is unavailable, a Canvas 2D fallback is used.
 - **Placeholder vs production-ready:** procedural terrain, line-art machines and proof renders are placeholders; the scroll/scene architecture, handoff and fallbacks are close to production. Tune on real GPUs and do a mobile art-direction pass before launch.
 
-### Candidate A — Fieldcore OS chapter (Ground / Air tabs)
+### Candidate A — Fieldcore OS chapter (Under-canopy / Fixed-wing / Underground / Pilot assistance tabs)
 
 Inspired by the reference risk-estimation capture in `reference_material/` (it is **not** embedded or shipped).
 
+- **Under-canopy route reconnaissance (first tab):** a quadrotor launches ahead of a ground team, scouts a dense forest for obstacles, hazards and choke points, and recommends the best corridor for movement. `forestScene.ts` provides a textured, foggy under-canopy camera view beside a progressively observed risk map. The scout investigates a choke point, fallen timber and a steep drainage cut, then scouts the eastern corridor through to the exit. The ground team holds until the recommendation is returned. `src/lib/forestRecon.ts` shares the seeded tree layout, terrain, route clearance/slope scores, scout flight, observation frontier and ground-team handoff; `forestMap2d.ts` provides a Canvas fallback.
 - **Ground tab:** no GPS, no light, no map. A chase camera follows the rover to a fork. It starts down the short direct branch, sees a drop (only visible up close), reverses out and takes the long, low-risk detour.
 - **Air tab:** `src/components/candidate-a/airScene.ts`. A fixed-wing machine flies low through a canyon, detects a radar (electronic warfare risk) covering its planned branch, and re-plans into the other canyon, keeping terrain between itself and the emitter.
-- **Interaction:** a pinned split screen. Scrolling drives the machine to the fork, holds while the camera looks down the direct branch and both routes are drawn on the map with their lengths, then drives the detour. Left: headlit camera view. Right: risk map built from what it has seen; unobserved space stays hatched.
+- **Pilot assistance tab:** `src/components/candidate-a/landingScene.ts`. A gear-mounted optical camera looks forward beneath a manned aircraft through dusk and fog. Landing lights reveal textured soil, gravel, stones and stubble at short range; the undercarriage frames the image. The risk view evaluates 128 sampled approaches (64 on lower-power devices), colors them by terrain/control cost and exponential importance weight, and draws their weighted mean. The sampled horizon begins at the current aircraft pose, concentrates around the accepted corridor, and closes as the aircraft touches down. `src/lib/landing.ts` shares the height field, slope/roughness measurements, clearance, relative corridor scores and motion. The MPPI-style sampling is an illustrative assessment, not a flight controller. Reduced motion freezes temporal grain and resampling; the Canvas fallback preserves the dark camera treatment and trajectory cloud.
+- **Interaction:** a pinned split screen. Scrolling plays under-canopy reconnaissance, fixed-wing, underground, then pilot assistance; scrolling back reverses the sequence. Tabs jump to the start of each demo and support arrow keys, Home and End. Each demo gets its own full scroll range. Four tabs use a two-row layout on mobile. Underground, scrolling drives the machine to the fork, holds while both routes are assessed, then drives the detour. Without WebGL, reconnaissance, underground and pilot assistance remain available with Canvas fallbacks and three scroll ranges.
 - **Implementation:** `src/lib/passage.ts` is a deterministic passage model (entry tunnel, fork, a direct branch with a drop and rubble, a winding detour, goal chamber, range sensor with occlusion, per-cell first/best observation). `deepScene.ts` draws both viewports from one WebGL context. `passageMap2d.ts` is the Canvas fallback and the "confined passage" proof placeholder.
 
 ## Candidate C — From One Machine to a Force
@@ -85,7 +90,7 @@ Inspired by the reference risk-estimation capture in `reference_material/` (it i
 
 ## Shared placeholders (replace before launch)
 
-- `src/config/site.ts`: company name (`COMPANY`), wordmark and contact email (`contact@example.com`).
+- `src/config/site.ts`: shared company name (`Rta Systems`) and wordmark (`RTA SYSTEMS`); contact email (`contact@example.com`) is still a placeholder.
 - `src/config/proof.ts` and `src/components/shared/ProofReel.astro`: proof items currently render procedural Canvas simulations labelled *"Placeholder — replace with capture"*. Put real MP4/WebM clips in `public/assets/proof/` and set `src` on each item.
 - `public/favicon.svg`: temporary mark.
 - `src/components/shared/CandidateSwitcher.astro` and `src/pages/index.astro`: review tooling only; remove for production.
