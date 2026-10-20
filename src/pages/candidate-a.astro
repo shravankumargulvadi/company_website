@@ -474,10 +474,10 @@ const forceCaps = [
     const fov = ((window.innerWidth < 700 ? 55 : 42) * Math.PI) / 180;
     const z0 = (2 * A_LINK_DIST * Math.tan(fov / 2)) / A_EXTENT;
     const stages = [
-      forceStage({ z: z0, uplink: 1, move: 0 }),
-      forceStage({ z: 0.42, follow: 0.5, uplink: 1, others: 1, fog: 0.35, threats: 0.3 }),
-      forceStage({ z: 0.72, cx: 0.62, cy: 0.4, follow: 0, uplink: 1, others: 1, team: 1, fog: 0.55, threats: 0.4, risk: 0.15 }),
-      forceStage({ z: 0.86, cx: 0.58, cy: 0.44, follow: 0, uplink: 1, others: 1, team: 1, operator: 1, fog: 0.55, threats: 0.4, risk: 0.12 }),
+      forceStage({ z: z0, uplink: 1, move: 0, engine: 1 }),
+      forceStage({ z: 0.42, follow: 0.5, uplink: 1, others: 1, fog: 0.35, threats: 0.3, engine: 0.7 }),
+      forceStage({ z: 0.72, cx: 0.62, cy: 0.4, follow: 0, uplink: 1, others: 1, team: 1, fog: 0.55, threats: 0.4, risk: 0.15, engine: 0.35 }),
+      forceStage({ z: 0.86, cx: 0.58, cy: 0.44, follow: 0, uplink: 1, others: 1, team: 1, operator: 1, fog: 0.55, threats: 0.4, risk: 0.12, engine: 0.2 }),
       forceStage({ z: 1.08, cx: 0.5, cy: 0.5, follow: 0, uplink: 1, others: 1, team: 1, operator: 1, network: 1, fog: 0.45, threats: 0.35, risk: 0.1 }),
     ];
     const N = stages.length - 1;
