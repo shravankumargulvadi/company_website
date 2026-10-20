@@ -1,5 +1,5 @@
 /**
- * Candidate C — one continuous Canvas 2D camera that zooms from a single
+ * Bird's-eye force chapter: one continuous Canvas 2D camera that zooms from a single
  * machine reasoning under uncertainty out to a distributed, human-supervised force.
  */
 import {
@@ -62,7 +62,7 @@ export interface ForceOptions {
   markerScale?: number;
   /** Blend the map boundary into the background instead of drawing an AO frame. */
   softEdges?: boolean;
-  /** Use this world instead of Candidate C's default. */
+  /** Use this world instead of the built-in default. */
   world?: World;
   /** Start pose for the lead machine. */
   start?: Pose;
@@ -330,7 +330,7 @@ export class ForceScene {
 
     if (this.edgeVeil) ctx.drawImage(this.edgeVeil, X(0), Y(0), K, K);
 
-    // Candidate C retains its area-of-operations frame; A uses the soft boundary.
+    // Without softEdges, draw a hard area-of-operations frame.
     const edge = smoothstep(0.75, 1.0, s.z);
     if (!this.edgeVeil && edge > 0.01) {
       ctx.strokeStyle = `rgba(235,233,226,${0.22 * edge})`;

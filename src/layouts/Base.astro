@@ -6,17 +6,15 @@ import '@fontsource-variable/space-grotesk';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import '../styles/global.css';
-import CandidateSwitcher from '../components/shared/CandidateSwitcher.astro';
 import { site } from '../config/site';
 
 interface Props {
   title?: string;
   description?: string;
-  theme: 'index' | 'a' | 'c';
-  switcher?: boolean;
+  theme: 'a';
 }
 
-const { title, description = site.description, theme, switcher = false } = Astro.props;
+const { title, description = site.description, theme } = Astro.props;
 const fullTitle = title ? `${title} — ${site.name}` : `${site.name} — ${site.tagline}`;
 ---
 
@@ -33,6 +31,5 @@ const fullTitle = title ? `${title} — ${site.name}` : `${site.name} — ${site
   </head>
   <body data-theme={theme}>
     <slot />
-    {switcher && theme !== 'index' && <CandidateSwitcher current={theme} />}
   </body>
 </html>

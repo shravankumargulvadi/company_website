@@ -6,8 +6,3 @@ export const site = {
   description: 'Building autonomous machines for the most difficult environments.',
   contactEmail: 'contact@example.com',
 };
-
-export const candidates = [
-  { slug: 'candidate-a', letter: 'A', title: "The Machine's Eyes" },
-  { slug: 'candidate-c', letter: 'C', title: 'From One Machine to a Force' },
-] as const;
