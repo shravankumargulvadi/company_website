@@ -144,6 +144,7 @@ const forceCaps = [
 
     <section class="force" data-sec="force" style="--h: 640vh">
       <div class="force__sticky">
+        <p class="sr-only">On every machine, Fieldcore OS runs one loop: perceive, believe, assess risk, plan, act.</p>
         <div class="force__caps">
           {forceCaps.map((c, i) => (
             <div class="force__cap" data-fcap={i}>
@@ -485,6 +486,7 @@ const forceCaps = [
     const scene = new ForceScene(forceCanvas, {
       lowPower,
       markerScale: 1.25,
+      reducedMotion: reduced,
       softEdges: true,
       world: createWorld(A_WORLD),
       start: { ...A_GOAL, heading: -0.6 },

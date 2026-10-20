@@ -60,6 +60,8 @@ export interface ForceOptions {
   lowPower?: boolean;
   /** Screen-space size multiplier for machines, operators and hub markers. */
   markerScale?: number;
+  /** Hold the loop ring still instead of orbiting and cycling its steps. */
+  reducedMotion?: boolean;
   /** Blend the map boundary into the background instead of drawing an AO frame. */
   softEdges?: boolean;
   /** Use this world instead of the built-in default. */
@@ -98,11 +100,13 @@ export class ForceScene {
   private frameNo = 0;
   private cam = { cx: 0.5, cy: 0.5 };
   private markerScale: number;
+  private reducedMotion: boolean;
   ready = false;
 
   constructor(private canvas: HTMLCanvasElement, opts: ForceOptions = {}) {
     this.ctx = canvas.getContext('2d')!;
     this.markerScale = opts.markerScale ?? 1;
+    this.reducedMotion = opts.reducedMotion ?? false;
     if (opts.softEdges) {
       // Bake the feather once; composite it over terrain, risk and fog together.
       this.edgeVeil = this.paint(256, 0, 0, 1, (u, v) => {
@@ -502,10 +506,11 @@ export class ForceScene {
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
       const steps = ['PERCEIVE', 'BELIEVE', 'ASSESS RISK', 'PLAN', 'ACT'];
-      const rot = this.time * 0.5;
+      const clock = this.reducedMotion ? 0 : this.time;
+      const rot = clock * 0.5;
       steps.forEach((t, i) => {
         const a = rot + (i / steps.length) * Math.PI * 2;
-        const on = (Math.floor(this.time * 2) % steps.length) === i;
+        const on = (Math.floor(clock * 2) % steps.length) === i;
         ctx.fillStyle = on ? `rgba(143,216,204,${s.engine})` : `rgba(8,10,11,${s.engine})`;
         ctx.strokeStyle = `rgba(143,216,204,${s.engine})`;
         ctx.beginPath(); ctx.arc(Math.cos(a) * R, Math.sin(a) * R, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
