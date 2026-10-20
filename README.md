@@ -4,11 +4,13 @@ The company name comes from Sanskrit **Ṛta (ऋत)**, the principle of cosmic
 
 One-page website for the company thesis **"Deterrence through autonomy."** The site is served at `/` (formerly Candidate A, "The Machine's Eyes"). The exploration candidates B and C have been removed; C's bird's-eye force chapter and its Fieldcore loop ring live on inside the page. The old `/candidate-a` and `/candidate-c` routes redirect to `/` (see `astro.config.mjs`).
 
+Hosted on GitHub Pages at https://shravankumargulvadi.github.io/company_website/. `.github/workflows/deploy.yml` builds and deploys every push to `main`. The site is built under `base: '/company_website'`; set `base` to `'/'` (and `site` to the new URL) when the custom domain is added.
+
 ## Running
 
 ```bash
 npm install
-npm run dev       # http://localhost:4321
+npm run dev       # http://localhost:4321/company_website/
 npm run build     # static output in dist/
 npm run check     # astro + TypeScript diagnostics
 npm test          # reconnaissance, landing assessment and motion checks
@@ -57,7 +59,7 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
 
 ### Fieldcore OS chapter (Under-canopy / Fixed-wing / Underground / Pilot assistance tabs)
 
-Inspired by the reference risk-estimation capture in `reference_material/` (it is **not** embedded or shipped).
+Inspired by a reference risk-estimation capture kept locally in `reference_material/` (git-ignored; **not** committed, embedded or shipped).
 
 - **Product framing:** a persistent **Fieldcore OS · In development** heading owns the development status. The four tabs are labelled as applications of the same autonomy system.
 - **Under-canopy route reconnaissance (first tab):** a quadrotor launches from a parked UGV's deck and scouts a dense forest for hazards and choke points. It investigates fallen timber and a steep drainage cut, then scouts the eastern corridor through to the exit. The scouted route gains a green surface highlight and a **Low risk** label before the UGV moves. The camera hands over to follow the UGV along that corridor, with the ground team behind it. `src/lib/forestRecon.ts` shares the seeded tree layout, terrain, route scores, launch height, flight, observation frontier and vehicle/team handoff; `forestScene.ts` and `forestMap2d.ts` render the same sequence in WebGL and Canvas.
