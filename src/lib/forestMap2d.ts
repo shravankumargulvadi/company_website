@@ -1,7 +1,7 @@
 /** Canvas fallback for under-canopy reconnaissance, using the same forest model. */
 import { fitCanvas } from './motion';
 import {
-  createForestRecon, forestHeight, forestRisk, forestState, forestScoutPose, forestTeamPose,
+  createForestRecon, forestHeight, forestRisk, forestState, forestScoutPose, forestTeamPose, forestUgvPose,
   forestObservedAt, forestObservationSamples, type ForestRecon,
 } from './forestRecon';
 
@@ -17,6 +17,9 @@ export class ForestMap2D {
   private w = 1;
   private h = 1;
   private dpr = 1;
+  private pathAnchor = { x: 0, y: 0, visible: false };
+
+  lowRiskAnchor() { return this.pathAnchor; }
 
   constructor(private canvas: HTMLCanvasElement, opts: { model?: ForestRecon } = {}) {
     this.ctx = canvas.getContext('2d')!;
@@ -39,11 +42,15 @@ export class ForestMap2D {
   frame(_dt: number, progress: number) {
     if (Math.abs(progress - this.lastProgress) < 0.001) return;
     this.lastProgress = progress;
-    const { model, ctx, w, h } = this, state = forestState(progress), pose = forestScoutPose(model, progress);
+    const { model, ctx, w, h } = this, state = forestState(progress), scout = forestScoutPose(model, progress);
+    const vehicle = forestUgvPose(model, progress);
     const vertical = w < h, pw = vertical ? w : w / 2, ph = vertical ? h / 2 : h;
     const a = forestScoutPose(model, Math.max(0.101, Math.min(0.798, progress - 0.002)));
     const b = forestScoutPose(model, Math.max(0.103, Math.min(0.8, progress + 0.002)));
-    const heading = Math.atan2(b.x - a.x, -(b.z - a.z));
+    const vehicleHeading = vehicle.heading;
+    const followVehicle = progress >= 0.875;
+    const heading = followVehicle ? vehicleHeading : Math.atan2(b.x - a.x, -(b.z - a.z));
+    const pose = followVehicle ? { x: vehicle.x - Math.sin(heading) * 6, y: vehicle.y + 2.7, z: vehicle.z + Math.cos(heading) * 6 } : scout;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.fillStyle = '#0c1719'; ctx.fillRect(0, 0, w, h);
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pw, ph); ctx.clip();
@@ -69,6 +76,32 @@ export class ForestMap2D {
           tree.crown / depth * focal, tree.crown / depth * focal * 0.4, j * 0.4, 0, Math.PI * 2); ctx.fill();
       }
     }
+    if (followVehicle) {
+      ctx.strokeStyle = 'rgba(154,227,180,0.5)'; ctx.lineWidth = 5; ctx.beginPath();
+      let started = false;
+      for (const p of model.best.points) {
+        const dx = p.x - pose.x, dz = p.z - pose.z;
+        const depth = dx * Math.sin(heading) - dz * Math.cos(heading);
+        if (depth < 2 || depth > 40) continue;
+        const x = pw / 2 + (dx * Math.cos(heading) + dz * Math.sin(heading)) / depth * focal;
+        const y = ph / 2 + (pose.y - forestHeight(p.x, p.z)) / depth * focal;
+        if (started) ctx.lineTo(x, y); else { ctx.moveTo(x, y); started = true; }
+      }
+      ctx.stroke();
+    }
+    if (progress < 0.13 || followVehicle) {
+      const x = pw / 2, y = ph * (followVehicle ? 0.65 : 0.69), size = Math.min(100, pw * 0.27);
+      ctx.fillStyle = '#667360'; ctx.fillRect(x - size / 2, y - size * 0.25, size, size * 0.4);
+      ctx.fillStyle = '#101718';
+      for (const side of [-1, 1]) for (const offset of [-0.27, 0.27]) ctx.fillRect(x + side * size * 0.5 - size * 0.09, y + offset * size * 0.4, size * 0.18, size * 0.23);
+      ctx.strokeStyle = '#d5dcca'; ctx.lineWidth = 1; ctx.strokeRect(x - size * 0.35, y - size * 0.24, size * 0.7, size * 0.22);
+      if (!followVehicle) {
+        const droneY = y - size * 0.25 - 8 - state.launch * size * 0.8;
+        ctx.strokeStyle = '#d4e3d8';
+        ctx.beginPath(); ctx.moveTo(x - 15, droneY - 6); ctx.lineTo(x + 15, droneY + 6); ctx.moveTo(x + 15, droneY - 6); ctx.lineTo(x - 15, droneY + 6); ctx.stroke();
+        for (const dx of [-15, 15]) for (const dy of [-6, 6]) { ctx.beginPath(); ctx.ellipse(x + dx, droneY + dy, 8, 3, 0, 0, Math.PI * 2); ctx.stroke(); }
+      }
+    }
     const vignette = ctx.createRadialGradient(pw / 2, ph / 2, pw * 0.12, pw / 2, ph / 2, Math.max(pw, ph) * 0.7);
     vignette.addColorStop(0, '#00000000'); vignette.addColorStop(1, '#000000aa'); ctx.fillStyle = vignette; ctx.fillRect(0, 0, pw, ph);
     ctx.restore();
@@ -91,7 +124,7 @@ export class ForestMap2D {
     model.routes.forEach((route, index) => {
       const best = route === model.best, count = best ? Math.floor(25 + (route.points.length - 25) * state.scouting) : route.points.length;
       ctx.globalAlpha = state.compare * (best ? 0.9 : 0.4 - state.recommended * 0.2);
-      ctx.strokeStyle = ['#c27653', '#c9a668', '#a9d7c4'][index]; ctx.lineWidth = best ? 2 : 1.2;
+      ctx.strokeStyle = ['#c27653', '#c9a668', '#a9d7c4'][index]; ctx.lineWidth = best && state.recommended > 0.5 ? 5 : best ? 2 : 1.2;
       ctx.setLineDash(best && state.recommended > 0.5 ? [] : [4, 3]); ctx.beginPath();
       route.points.slice(0, count).forEach((p, i) => i ? ctx.lineTo(X(p.x), Z(p.z)) : ctx.moveTo(X(p.x), Z(p.z))); ctx.stroke();
     });
@@ -102,7 +135,11 @@ export class ForestMap2D {
       ctx.beginPath(); ctx.arc(X(hazard.x), Z(hazard.z), hazard.radius * scale, 0, Math.PI * 2); ctx.stroke();
     });
     ctx.strokeStyle = '#d4e3d8'; ctx.lineWidth = 1.4;
-    for (const dx of [-3, 3]) for (const dz of [-3, 3]) { ctx.beginPath(); ctx.arc(X(pose.x) + dx, Z(pose.z) + dz, 2.7, 0, Math.PI * 2); ctx.stroke(); }
+    for (const dx of [-3, 3]) for (const dz of [-3, 3]) { ctx.beginPath(); ctx.arc(X(scout.x) + dx, Z(scout.z) + dz, 2.7, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.save(); ctx.translate(X(vehicle.x), Z(vehicle.z)); ctx.rotate(vehicleHeading);
+    ctx.fillStyle = '#e2dfcb'; ctx.fillRect(-1.05 * scale, -1.5 * scale, 2.1 * scale, 3 * scale); ctx.restore();
+    const point = model.best.points[Math.floor(model.best.points.length * 0.58)];
+    this.pathAnchor = { x: X(point.x), y: Z(point.z), visible: true };
     const team = forestTeamPose(model, progress); ctx.fillStyle = '#dfdccb';
     for (let i = -1; i <= 1; i++) ctx.fillRect(X(team.x + i * 1.1) - 2, Z(team.z + 3) - 2, 4, 4);
   }

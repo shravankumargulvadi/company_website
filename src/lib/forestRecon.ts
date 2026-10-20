@@ -6,6 +6,8 @@ export interface ForestRoute {
   id: string; name: string; reason: string; points: ForestPoint[];
   length: number; clearance: number; slope: number; score: number;
 }
+/** Drone centre height when its skids rest on the UGV launch deck. */
+export const FOREST_LAUNCH_HEIGHT = 1.22;
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
 const smooth = (v: number) => { const t = clamp(v); return t * t * (3 - 2 * t); };
@@ -113,7 +115,8 @@ export function forestState(progress: number) {
     compare: smooth((progress - 0.24) / 0.17),
     scouting: clamp((progress - 0.5) / 0.3),
     recommended: smooth((progress - 0.8) / 0.055),
-    team: smooth((progress - 0.86) / 0.13),
+    ugv: smooth((progress - 0.89) / 0.105),
+    team: smooth((progress - 0.9) / 0.1),
   };
 }
 
@@ -124,7 +127,15 @@ export function forestScoutPose(model: ForestRecon, progress: number) {
   else if (progress < 0.22) p = along([model.entry, model.fork], smooth((progress - 0.1) / 0.12));
   else if (progress < 0.5) p = along(model.exploration, clamp((progress - 0.22) / 0.28));
   else p = along(model.best.points.slice(24), state.scouting);
-  return { ...p, y: forestHeight(p.x, p.z) + 0.3 + state.launch * 2.5 };
+  return { ...p, y: forestHeight(p.x, p.z) + FOREST_LAUNCH_HEIGHT + state.launch * (2.8 - FOREST_LAUNCH_HEIGHT) };
+}
+
+export function forestUgvPose(model: ForestRecon, progress: number) {
+  const phase = forestState(progress).ugv * 0.72;
+  const p = along(model.best.points, phase);
+  const a = along(model.best.points, Math.max(0, phase - 0.001));
+  const b = along(model.best.points, Math.min(1, phase + 0.001));
+  return { ...p, y: forestHeight(p.x, p.z), heading: Math.atan2(b.x - a.x, -(b.z - a.z)) };
 }
 
 export function forestTeamPose(model: ForestRecon, progress: number) {

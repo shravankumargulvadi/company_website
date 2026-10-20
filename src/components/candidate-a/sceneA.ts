@@ -674,6 +674,33 @@ export class EyesScene {
     return poseAt(this.mainPath, this.mainPhase);
   }
 
+  /** Screen positions for HTML callouts, following the rendered camera and surface. */
+  annotationAnchors(kind: 'perception' | 'belief' | 'risk') {
+    const width = this.canvas.clientWidth, height = this.canvas.clientHeight;
+    const project = (u: number, v: number, lift = 0.02) => {
+      const [x, z] = toXZ(u, v);
+      const p = new THREE.Vector3(x, this.groundY(u, v) + lift, z).project(this.camera);
+      return { x: (p.x + 1) * width / 2, y: (1 - p.y) * height / 2, visible: p.z > -1 && p.z < 1 && Math.abs(p.x) < 0.94 && Math.abs(p.y) < 0.88 };
+    };
+    const robot = this.mainPose();
+    let feature = project(robot.u + 0.04, robot.v), score = -Infinity;
+    for (let i = -5; i <= 5; i++) for (let j = -5; j <= 5; j++) {
+      const u = robot.u + i * 0.025, v = robot.v + j * 0.025;
+      const distance = Math.hypot(i, j) * 0.025 * EXTENT;
+      if (u < 0.02 || u > 0.98 || v < 0.02 || v > 0.98 || distance < 0.32) continue;
+      if (kind === 'perception' && distance > 0.85) continue;
+      const p = project(u, v);
+      if (!p.visible || p.y < height * 0.25) continue;
+      const position = -Math.hypot(p.x / width - 0.64, p.y / height - 0.49) * 0.6;
+      const contour = sample(this.world.height, this.world.size, u, v) * 14;
+      const value = kind === 'risk' ? sample(this.hazH, this.world.size, u, v) * 2
+        : kind === 'belief' ? this.knowledge.get(u, v) - Math.abs(contour - Math.round(contour))
+        : 1 - Math.abs(distance - 0.6);
+      if (value + position > score) { score = value + position; feature = p; }
+    }
+    return { robot: project(robot.u, robot.v, 0.1), feature };
+  }
+
   groundY(u: number, v: number) {
     const w = this.world;
     const h = Math.max(sample(w.height, w.size, u, v), w.waterLevel);

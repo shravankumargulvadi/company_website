@@ -2,6 +2,8 @@
 
 Read this before changing anything. Last updated on branch `devin/1792319361-consolidate-a` (PR #2).
 
+Latest iteration (2026-10-20): the company is **Rta Systems**. Candidate A now includes camera-anchored explanatory arrows for Perception / Belief / Risk, and four applications under one persistent **Fieldcore OS · In development** heading. Under-canopy reconnaissance comes first: a quadrotor launches from a UGV, scouts a corridor, marks it low risk, and hands the route back before the UGV advances. See the current application details in `README.md`.
+
 ## What this is
 A one-page marketing site for an early-stage defense-autonomy startup. Motto: **"Deterrence through autonomy."**
 The company builds foundational autonomy for machines in difficult, uncertain, contested, unmapped, adversarial environments.
@@ -38,6 +40,7 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
 1. **Hero:** "Deterrence through autonomy." A cursor lens shows the machine's view of the terrain.
 2. **01 The shift**, then **02 A different world** (structured vs contested).
 3. **Reason** (sticky rail): Reality → Perception → Belief → Risk → Decision, all on one 3D terrain with a UGV.
+   - Plain-language callouts point to the robot, sensor returns, mapped understanding and raised risk peaks. Their anchors are projected from the live 3D camera.
    - At *Risk* the terrain lifts into a cost field (`field` state). Height is the combined risk; colour shows the source.
    - Colours: terrain amber, ambiguous sensing violet, EW red. The legend sits in the rail.
    - The fields come from `createWorld({hazards:true})`, which adds `ambiguity` and threat, and they also feed `riskAt`, so the planned path is real.
@@ -58,7 +61,9 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
    3. Deterrence through denial and punishment.
 
    The fixed bird's-eye canvas stays behind it, heavily dimmed.
-7. **09 Fieldcore OS (In progress):** a split screen with two demos, picked with a prominent top-centre switch. **Air is the default.** Clicking a tab scrolls to the start of the section, so the demo restarts.
+7. **09 Fieldcore OS applications:** a persistent product heading states **Fieldcore OS · In development**. It is the platform under development; the tabs illustrate applications. Scrolling automatically advances through **Under-canopy → Fixed-wing → Underground → Pilot assistance**. Each application has its own full scroll range; tabs jump to its start and support keyboard navigation. Mobile uses two rows. No-WebGL mode keeps under-canopy, underground and pilot assistance through Canvas fallbacks.
+   - **Under-canopy** (`forestScene.ts`, `forestRecon.ts`, `forestMap2d.ts`): a quadrotor lifts from a UGV launch deck, checks hazards and scouts the eastern corridor. The route turns green and is labelled low risk before the UGV starts. A short camera handoff follows the vehicle, while the map retains the scout, UGV and team. Unobserved forest stays unknown.
+   - **Pilot assistance** (`landingScene.ts`, `landing.ts`, `landingMap2d.ts`): a gear-mounted camera views uneven terrain through dusk and fog. A parallel map shows 64–128 weighted approach samples and their mean. The pilot remains in command; the sequence is illustrative, not a flight controller.
    - **Air** (`airScene.ts`, own canvas `#a-air`, created lazily):
      - A fixed-wing aircraft flies low through a procedural canyon, with a chase camera on the left and a risk map on the right.
      - A radar dome (EW) appears over its planned branch. The planned route turns red and gets struck through, and the aircraft re-plans into the other canyon ("terrain-masked").
@@ -83,7 +88,8 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
 - The deterrence section's backdrop is very dark.
 - Mobile was checked only partly, at 390×844 earlier. The tabs and deterrence section are unchecked on mobile.
 - The no-WebGL fallback has not been re-checked; the Air tab is hidden there. Real-GPU performance is unmeasured; everything was tested with software WebGL.
-- Placeholders: company name/email in `src/config/site.ts`, procedural terrain, line-art glyphs.
+- Placeholders: contact email in `src/config/site.ts`, procedural terrain, line-art glyphs. The company name is Rta Systems.
+- Current environment has no browser connected to the computer-use tool; visual screenshots cannot be claimed from the current run. Model, geometry, build and TypeScript checks are available. The documented `~/.nvm/nvm.sh` is also absent here; use installed Node when that startup file is unavailable.
 
 ## Verification tips
 - Screenshots via Playwright over CDP (`http://localhost:29229`): scroll to `section top + progress × (offsetHeight − innerHeight)` for a `[data-sec]`, wait about 2.5 s, then screenshot.

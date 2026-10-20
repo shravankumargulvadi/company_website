@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { createNoise2D, fbm, mulberry32 } from '../../lib/noise';
 import {
   createForestRecon, forestHeight, forestRisk, forestState, forestScoutPose,
-  forestTeamPose, forestObservationSamples, forestObservedAt, type ForestRecon,
+  forestTeamPose, forestUgvPose, forestObservationSamples, forestObservedAt, type ForestRecon,
 } from '../../lib/forestRecon';
 
 const ROUTE_COLORS = [0xc27653, 0xc9a668, 0xa9d7c4];
@@ -17,6 +17,9 @@ export class ForestScene {
   private mapCamera = new THREE.PerspectiveCamera(36, 1, 1, 400);
   private quad = new THREE.Group();
   private team = new THREE.Group();
+  private ugv = new THREE.Group();
+  private mapUgv = new THREE.Group();
+  private lowRiskPaths: THREE.Mesh[] = [];
   private mapQuad = new THREE.Group();
   private mapTeam = new THREE.Group();
   private rotors: THREE.Mesh[] = [];
@@ -102,12 +105,13 @@ export class ForestScene {
     this.buildForest();
     this.buildQuad();
     this.buildTeam();
+    this.buildUgv();
     const light = new THREE.SpotLight(0xd7e1ca, 52, 28, 0.6, 0.7, 1);
     light.position.set(0, 0, -0.3); light.target.position.set(0, -1.7, -15);
     light.castShadow = !opts.lowPower;
     light.shadow.mapSize.set(512, 512); light.shadow.bias = -0.0005;
     this.quad.add(light, light.target);
-    this.world.add(this.quad, this.team);
+    this.world.add(this.quad, this.team, this.ugv);
     const mapTrunk = new THREE.CylinderGeometry(1, 1, 1, 8);
     this.mapTrees = new THREE.InstancedMesh(mapTrunk, new THREE.MeshBasicMaterial({ color: 0xffffff }), model.trees.length);
     const dummy = new THREE.Object3D();
@@ -116,7 +120,7 @@ export class ForestScene {
       dummy.scale.set(tree.radius * 1.25, 1.4, tree.radius * 1.25); dummy.updateMatrix();
       this.mapTrees.setMatrixAt(i, dummy.matrix); this.mapTrees.setColorAt(i, new THREE.Color(0x10191a));
     });
-    this.map.add(this.mapTrees, this.mapQuad, this.mapTeam);
+    this.map.add(this.mapTrees, this.mapQuad, this.mapTeam, this.mapUgv);
     model.routes.forEach((route, index) => {
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(route.points.map(p =>
         new THREE.Vector3(p.x, forestHeight(p.x, p.z) + 0.4, p.z))), new THREE.LineDashedMaterial({
@@ -126,6 +130,23 @@ export class ForestScene {
       line.computeLineDistances(); line.renderOrder = 5;
       this.map.add(line); this.routes.push(line);
     });
+    for (const [scene, width, opacity] of [[this.world, 0.62, 0.35], [this.map, 0.85, 0.4]] as const) {
+      const vertices: number[] = [], indices: number[] = [];
+      model.best.points.forEach((p, i, points) => {
+        const a = points[Math.max(0, i - 1)], b = points[Math.min(points.length - 1, i + 1)];
+        const length = Math.max(0.001, Math.hypot(b.x - a.x, b.z - a.z));
+        for (const side of [-1, 1]) {
+          const x = p.x + (b.z - a.z) / length * width * side, z = p.z - (b.x - a.x) / length * width * side;
+          vertices.push(x, forestHeight(x, z) + 0.07, z);
+        }
+        if (i) { const k = i * 2; indices.push(k - 2, k - 1, k, k - 1, k + 1, k); }
+      });
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); geometry.setIndex(indices);
+      const path = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0x9ae3b4, transparent: true, opacity: 0, depthTest: scene === this.world, depthWrite: false, side: THREE.DoubleSide }));
+      path.userData.opacity = opacity; path.renderOrder = 4;
+      this.lowRiskPaths.push(path); scene.add(path);
+    }
     model.hazards.forEach(hazard => {
       const points = Array.from({ length: 36 }, (_, i) => {
         const a = i / 36 * Math.PI * 2;
@@ -234,6 +255,10 @@ export class ForestScene {
     }
     const lens = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), new THREE.MeshStandardMaterial({ color: 0x0c1518, metalness: 0.5, roughness: 0.2 }));
     lens.position.set(0, -0.03, -0.22); this.quad.add(lens);
+    for (const x of [-0.14, 0.14]) {
+      const skid = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.34, 6), carbon);
+      skid.rotation.x = Math.PI / 2; skid.position.set(x, -0.17, 0); this.quad.add(skid);
+    }
     this.quad.traverse(o => { if (o instanceof THREE.Mesh) o.castShadow = true; });
     this.rotors.forEach(rotor => { rotor.castShadow = false; });
   }
@@ -258,6 +283,38 @@ export class ForestScene {
     }
   }
 
+  private buildUgv() {
+    const shell = new THREE.MeshStandardMaterial({ color: 0x687363, metalness: 0.25, roughness: 0.75 });
+    const rubber = new THREE.MeshStandardMaterial({ color: 0x171c1c, roughness: 0.95 });
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.46, 2.25), shell); chassis.position.y = 0.69;
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.1, 1.85), shell); deck.position.y = 1;
+    this.ugv.add(chassis, deck);
+    const landingMark = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-0.58, 1.055, -0.58), new THREE.Vector3(0.58, 1.055, -0.58),
+      new THREE.Vector3(0.58, 1.055, 0.58), new THREE.Vector3(-0.58, 1.055, 0.58),
+    ]), new THREE.LineBasicMaterial({ color: 0xd3d9c7 }));
+    this.ugv.add(landingMark);
+    for (const x of [-0.76, 0.76]) for (const z of [-0.8, 0, 0.8]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.22, 16), rubber);
+      wheel.rotation.z = Math.PI / 2; wheel.position.set(x, 0.34, z); this.ugv.add(wheel);
+    }
+    const sensor = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.18, 0.2), rubber); sensor.position.set(0, 0.91, -1.16); this.ugv.add(sensor);
+    this.ugv.traverse(object => { if (object instanceof THREE.Mesh) { object.castShadow = true; object.receiveShadow = true; } });
+    const marker = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.6, 3), new THREE.MeshBasicMaterial({ color: 0xe2dfcb, depthTest: false }));
+    marker.position.y = 0.8; this.mapUgv.add(marker); this.mapUgv.renderOrder = 7;
+    const nose = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-0.7, 1.2, -0.8), new THREE.Vector3(0, 1.2, -2.1), new THREE.Vector3(0.7, 1.2, -0.8),
+    ]), new THREE.LineBasicMaterial({ color: 0x9ae3b4, depthTest: false })); this.mapUgv.add(nose);
+  }
+
+  lowRiskAnchor() {
+    const point = this.model.best.points[Math.floor(this.model.best.points.length * 0.58)];
+    const p = new THREE.Vector3(point.x, forestHeight(point.x, point.z) + 0.4, point.z).project(this.mapCamera);
+    const width = this.vertical ? this.w : this.w / 2, height = this.vertical ? this.h / 2 : this.h;
+    return { x: (this.vertical ? 0 : width) + (p.x + 1) * width / 2,
+      y: (this.vertical ? height : 0) + (1 - p.y) * height / 2, visible: Math.abs(p.x) < 0.95 && Math.abs(p.y) < 0.9 };
+  }
+
   resize() {
     this.w = Math.max(1, this.canvas.clientWidth); this.h = Math.max(1, this.canvas.clientHeight);
     this.vertical = this.w / this.h < 1; this.renderer.setSize(this.w, this.h, false);
@@ -279,7 +336,7 @@ export class ForestScene {
     this.heading += turn * (this.reduced ? 1 : 1 - Math.exp(-dt * 7));
     const heading = this.heading;
     const forward = new THREE.Vector3(Math.sin(heading), 0, -Math.cos(heading));
-    this.quad.position.set(pose.x, pose.y + (this.reduced ? 0 : Math.sin(this.elapsed * 3) * 0.015), pose.z);
+    this.quad.position.set(pose.x, pose.y + (this.reduced ? 0 : Math.sin(this.elapsed * 3) * 0.015 * state.launch), pose.z);
     this.quad.rotation.set(-0.025, -heading, 0, 'YXZ');
     this.mapQuad.position.set(pose.x, forestHeight(pose.x, pose.z) + 2.5, pose.z); this.mapQuad.rotation.y = -heading;
     const team = forestTeamPose(model, progress);
@@ -288,11 +345,20 @@ export class ForestScene {
     const teamHeading = Math.hypot(nextTeam.x - team.x, nextTeam.z - team.z) > 1e-5
       ? Math.atan2(nextTeam.x - team.x, -(nextTeam.z - team.z)) : 0;
     this.team.rotation.y = this.mapTeam.rotation.y = -teamHeading;
+    const vehicle = forestUgvPose(model, progress), vehicleHeading = vehicle.heading;
+    this.ugv.position.set(vehicle.x, vehicle.y, vehicle.z); this.mapUgv.position.copy(this.ugv.position);
+    this.ugv.rotation.y = this.mapUgv.rotation.y = -vehicleHeading;
     const look = new THREE.Vector3(pose.x, pose.y + 0.1, pose.z).addScaledVector(forward, 7);
     this.camera.position.set(pose.x, pose.y + 0.9 + (1 - state.launch) * 1.8, pose.z);
     this.camera.position.addScaledVector(forward, -(3 + (1 - state.launch) * 5));
     this.camera.position.y = Math.max(this.camera.position.y, forestHeight(this.camera.position.x, this.camera.position.z) + 1.8);
     this.camera.lookAt(look);
+    if (progress >= 0.875) {
+      const forward = new THREE.Vector3(Math.sin(vehicleHeading), 0, -Math.cos(vehicleHeading));
+      this.camera.position.set(vehicle.x, vehicle.y + 2.7, vehicle.z).addScaledVector(forward, -6);
+      this.camera.position.y = Math.max(this.camera.position.y, forestHeight(this.camera.position.x, this.camera.position.z) + 1.8);
+      this.camera.lookAt(new THREE.Vector3(vehicle.x, vehicle.y + 0.9, vehicle.z).addScaledVector(forward, 4));
+    }
     this.mapCamera.position.set(58, 141, 130); this.mapCamera.lookAt(0, 0, 49);
     this.riskMaterial.uniforms.uProgress.value = progress;
     this.scan.position.set(pose.x, forestHeight(pose.x, pose.z) + 0.6, pose.z);
@@ -308,6 +374,7 @@ export class ForestScene {
       material.gapSize = best && state.recommended > 0.5 ? 0 : 0.6;
       line.geometry.setDrawRange(0, best ? Math.floor(25 + (model.best.points.length - 25) * state.scouting) : model.routes[i].points.length);
     });
+    this.lowRiskPaths.forEach(path => { (path.material as THREE.MeshBasicMaterial).opacity = state.recommended * path.userData.opacity; });
     this.hazards.forEach(({ marker, seen }) => { (marker.material as THREE.LineBasicMaterial).opacity = progress >= seen ? 0.8 : 0; });
     const { w, h, renderer } = this; renderer.setScissorTest(true);
     const views: [THREE.Scene, THREE.Camera, number, number, number, number][] = this.vertical

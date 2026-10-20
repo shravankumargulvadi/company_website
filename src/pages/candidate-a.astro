@@ -24,10 +24,10 @@ const airBeats = [
   { h: 'Same Fieldcore OS. Different body.', p: 'On the ground or in the air, it weighs terrain, the unknown and the adversary.' },
 ];
 const forestBeats = [
-  { h: 'Scout the route before the team moves.', p: 'A quadrotor scouts ahead of a ground team, detects obstacles, hazards and choke points, and recommends the best corridor through dense forest.' },
+  { h: 'Launch the scout. Hold the UGV.', p: 'A quadrotor takes off from the UGV to scout the forest ahead, detect hazards and find a lower-risk corridor for the ground team.' },
   { h: 'The shortest way is not the safest.', p: 'A narrow passage closes around fallen timber. The alternative crosses a steep drainage cut.' },
   { h: 'Find the corridor. Then scout it.', p: 'The quadrotor checks the eastern route beneath the canopy, building a picture of clearance, terrain and the ground still unseen.' },
-  { h: 'A route the team can act on.', p: 'The scouted corridor is sent back to the ground team, with hazards marked and the lower-risk route highlighted.' },
+  { h: 'Route found. UGV moving.', p: 'The scouted corridor is highlighted and marked low risk. The UGV follows it through the forest, with hazards mapped for the ground team.' },
 ];
 const pilotBeats = [
   { h: 'Limited visibility. Uneven ground.', p: 'A camera beneath the fuselage reveals the landing terrain through haze. The pilot stays in command.' },
@@ -122,6 +122,15 @@ const forceCaps = [
             ))}
           </ol>
         </div>
+        <div class="reason__annotations" data-scene-annotations hidden>
+          <svg class="reason__arrows" data-scene-arrows aria-hidden="true">
+            <defs><marker id="reason-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7" fill="none" stroke="currentColor" stroke-width="1.2" /></marker></defs>
+            <path data-scene-arrow="robot" marker-end="url(#reason-arrow)" />
+            <path data-scene-arrow="feature" marker-end="url(#reason-arrow)" />
+          </svg>
+          <div class="reason__callout reason__callout--feature" data-scene-label="feature"><strong data-scene-label-title></strong><span data-scene-label-copy></span></div>
+          <div class="reason__callout reason__callout--robot" data-scene-label="robot"><strong>Ground robot</strong><span>Sensing its surroundings</span></div>
+        </div>
       </div>
     </section>
 
@@ -178,7 +187,7 @@ const forceCaps = [
 
     <section class="deep" data-sec="deep" data-tab="forest" style="--h: 2420vh">
       <div class="deep__sticky">
-        <canvas id="a-forest" class="deep__gl" aria-label="A quadrotor scouts beneath dense forest canopy while an observation map reveals obstacles, hazards, choke points and a recommended corridor for a waiting ground team" role="img"></canvas>
+        <canvas id="a-forest" class="deep__gl" aria-label="A quadrotor launches from a UGV, scouts beneath forest canopy, and marks a low-risk corridor that the UGV then follows" role="img"></canvas>
         <canvas id="a-deep" class="deep__gl" aria-label="The machine's camera view of a dark passage beside the 2.5D risk map it builds while driving" role="img" hidden></canvas>
         <canvas id="a-deep-2d" class="deep__gl" hidden></canvas>
         <canvas id="a-air" class="deep__gl" aria-label="Chase view of a fixed-wing machine flying a canyon beside its risk map" role="img" hidden></canvas>
@@ -190,16 +199,22 @@ const forceCaps = [
         <p class="deep__air deep__route--direct mono" data-air="planned" aria-hidden="true">Planned · exposed · high risk</p>
         <p class="deep__air deep__route--detour mono" data-air="detour" aria-hidden="true">Re-plan · terrain-masked</p>
         <p class="deep__route deep__route--detour mono" data-route="detour" aria-hidden="true">Detour · <b data-len="detour">–</b> m · low risk</p>
-        <div class="deep__switch mono" role="tablist" aria-label="Fieldcore OS demos">
-          <span class="deep__badge">In progress</span>
+        <div class="deep__product" aria-label="Fieldcore OS is in development">
+          <h2 class="mono">Fieldcore OS <span class="deep__development">In development</span></h2>
+          <p>One autonomy system. Many applications.</p>
+        </div>
+        <div class="deep__switch mono" role="tablist" aria-label="Applications of Fieldcore OS">
+          <span class="deep__badge">Applications</span>
           <button type="button" role="tab" data-tab="forest" aria-selected="true">Under-canopy</button>
           <button type="button" role="tab" data-tab="air" aria-selected="false">Fixed-wing</button>
           <button type="button" role="tab" data-tab="ground" aria-selected="false">Underground</button>
           <button type="button" role="tab" data-tab="pilot" aria-selected="false">Pilot assistance</button>
         </div>
-        <p class="deep__pilot-label mono" data-recon-label>Under-canopy route reconnaissance</p>
+        <div class="deep__recon-cut" aria-hidden="true"><span>Low-risk corridor confirmed</span></div>
+        <p class="deep__pilot-label mono" data-recon-label>UGV launch deck · quadrotor scout</p>
+        <p class="deep__recon-path-label mono" data-recon-path-label hidden>Low risk · recommended corridor</p>
         <aside class="deep__pilot deep__recon mono" data-recon-panel hidden aria-label="Forest corridor reconnaissance assessment">
-          <p class="deep__pilot-status" data-recon-status>Scout launched · ground team holding</p>
+          <p class="deep__pilot-status" data-recon-status>Scout launching · UGV holding</p>
           <p class="deep__pilot-key" data-recon-summary>Surveying the route ahead</p>
           <ol>
             {['direct', 'drainage', 'flank'].map((id) => (
@@ -228,7 +243,7 @@ const forceCaps = [
           <p class="deep__pilot-note">Illustrative assessment · pilot retains control</p>
         </aside>
         <div class="deep__copy">
-          <p class="eyebrow">09 — Fieldcore OS</p>
+          <p class="eyebrow" data-application-title>Application · under-canopy reconnaissance</p>
           {[['forest', forestBeats], ['air', airBeats], ['ground', beats], ['pilot', pilotBeats]].map(([k, list]) => (
             <ol class="deep__beats" data-beats={k as string} hidden={k !== 'forest'}>
               {(list as typeof beats).map((b, i) => (
@@ -367,6 +382,15 @@ const forceCaps = [
   const coverers = [sections.get('deep')!];
   let forceOpacity = 0;
   const STAGE_AT = [0, 0.2, 0.4, 0.6, 0.8];
+  let reasonStage = 0;
+  const annotations = document.querySelector<HTMLElement>('[data-scene-annotations]')!;
+  const annotationSvg = annotations.querySelector<SVGSVGElement>('[data-scene-arrows]')!;
+  const annotationTitle = annotations.querySelector<HTMLElement>('[data-scene-label-title]')!;
+  const annotationCopy = annotations.querySelector<HTMLElement>('[data-scene-label-copy]')!;
+  const annotationItems = (['robot', 'feature'] as const).map(key => ({ key,
+    label: annotations.querySelector<HTMLElement>(`[data-scene-label="${key}"]`)!,
+    arrow: annotations.querySelector<SVGPathElement>(`[data-scene-arrow="${key}"]`)!,
+  }));
 
   function sectionProgress(name: string) {
     const el = sections.get(name)!;
@@ -378,9 +402,35 @@ const forceCaps = [
     const p = sectionProgress('reason');
     let active = 0;
     STAGE_AT.forEach((a, i) => p >= a && (active = i));
+    reasonStage = active;
     railItems.forEach((li, i) => li.classList.toggle('is-active', i === active));
     railItems.forEach((li, i) => li.classList.toggle('is-past', i < active));
     railFill.style.transform = `scaleY(${p})`;
+  }
+
+  function updateAnnotations(s: SceneState, scene: import('../components/candidate-a/sceneA').EyesScene) {
+    const bounds = sections.get('reason')!.getBoundingClientRect();
+    const kind = reasonStage === 1 ? 'perception' : reasonStage === 2 ? 'belief' : 'risk';
+    const ready = reasonStage === 1 ? s.points > 0.25 : reasonStage === 2 ? s.belief > 0.25 : s.field > 0.3;
+    annotations.hidden = reasonStage < 1 || reasonStage > 3 || bounds.top > 0 || bounds.bottom < window.innerHeight || !ready;
+    if (annotations.hidden) return;
+    const copy = kind === 'perception' ? ['Sensor measurements', 'These points are returns from the robot’s sensors.']
+      : kind === 'belief' ? ['The robot’s understanding', 'Lit contours show the surroundings it has mapped.']
+      : ['Taller peaks mean higher risk', 'Raised areas show where movement is more risky.'];
+    annotationTitle.textContent = copy[0]; annotationCopy.textContent = copy[1];
+    annotationSvg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
+    const anchors = scene.annotationAnchors(kind);
+    annotationItems.forEach(({ key, label, arrow }) => {
+      const target = anchors[key];
+      label.hidden = !target.visible;
+      arrow.style.visibility = target.visible ? 'visible' : 'hidden';
+      if (!target.visible) return;
+      const box = label.getBoundingClientRect();
+      const x = target.x < box.left ? box.left : target.x > box.right ? box.right : (box.left + box.right) / 2;
+      const y = target.x >= box.left && target.x <= box.right ? (target.y < box.top ? box.top : box.bottom) : box.top + box.height / 2;
+      const mid = (x + target.x) / 2;
+      arrow.setAttribute('d', `M${x.toFixed(1)},${y.toFixed(1)} L${mid.toFixed(1)},${y.toFixed(1)} L${target.x.toFixed(1)},${target.y.toFixed(1)}`);
+    });
   }
 
   /* Bird's-eye chapter: a fixed Canvas 2D layer that takes over from the 3D view
@@ -572,7 +622,7 @@ const forceCaps = [
     let airLoading: Promise<void> | null = null;
     let pilot: { resize(): void; frame(dt: number, progress: number): void } | null = null;
     let pilotLoading: Promise<void> | null = null;
-    let forest: { resize(): void; frame(dt: number, progress: number): void } | null = null;
+    let forest: { resize(): void; frame(dt: number, progress: number): void; lowRiskAnchor?(): { x: number; y: number; visible: boolean } } | null = null;
     let forestLoading: Promise<void> | null = null;
     let sa = 0;
     let sp = 0;
@@ -612,6 +662,8 @@ const forceCaps = [
     const reconPanel = deepSec.querySelector<HTMLElement>('[data-recon-panel]')!;
     const reconStatus = deepSec.querySelector<HTMLElement>('[data-recon-status]')!;
     const reconSummary = deepSec.querySelector<HTMLElement>('[data-recon-summary]')!;
+    const reconLabel = deepSec.querySelector<HTMLElement>('[data-recon-label]')!;
+    const pathLabel = deepSec.querySelector<HTMLElement>('[data-recon-path-label]')!;
     const hazardSeen = recon.hazards.map(h => forestModel.forestObservedAt(reconSamples, h.x, h.z));
     const reconRows = recon.routes.map(route => {
       const row = deepSec.querySelector<HTMLElement>(`[data-recon-route="${route.id}"]`)!;
@@ -622,10 +674,17 @@ const forceCaps = [
     const forestUI = () => {
       const state = forestModel.forestState(sf);
       const detected = hazardSeen.filter(at => sf >= at).length;
-      reconStatus.textContent = state.team > 0.05 ? 'Ground team moving · corridor received'
-        : state.recommended > 0.5 ? 'Scouted corridor · recommended'
+      reconStatus.textContent = state.ugv > 0.02 ? 'UGV moving · following low-risk corridor'
+        : state.recommended > 0.5 ? 'Low-risk corridor · UGV ready'
         : sf > 0.5 ? 'Scouting the eastern corridor'
-        : detected ? 'Hazards detected · assessing corridors' : 'Scout launched · ground team holding';
+        : detected ? 'Hazards detected · assessing corridors' : 'Scout launching · UGV holding';
+      reconLabel.textContent = sf < 0.1 ? 'UGV launch deck · quadrotor scout'
+        : sf < 0.875 ? 'Under-canopy route reconnaissance' : 'UGV · following low-risk corridor';
+      deepSec.querySelector('.deep__tag--r')!.textContent = state.recommended > 0.5 ? 'Low-risk corridor · route for the UGV' : 'Observed terrain · route assessment';
+      deepSec.style.setProperty('--recon-cut-opacity', String(reduced ? 0 : Math.max(0, 1 - Math.abs(sf - 0.875) / 0.016)));
+      const anchor = forest?.lowRiskAnchor?.();
+      pathLabel.hidden = state.recommended < 0.5 || !anchor?.visible;
+      if (anchor) { pathLabel.style.left = `${anchor.x}px`; pathLabel.style.top = `${anchor.y}px`; }
       reconSummary.textContent = `${detected} hazards mapped · ${state.recommended > 0.5 ? `${recon.best.length.toFixed(0)} m corridor scouted` : 'unobserved ground stays unknown'}`;
       reconRows.forEach(({ route, row, score, bar, reason }) => {
         const observed = route.id === 'direct' ? sf >= Math.max(hazardSeen[0], hazardSeen[1])
@@ -635,7 +694,7 @@ const forceCaps = [
         row.classList.toggle('is-rejected', state.recommended > 0.5 && !chosen);
         score.textContent = observed ? `${route.score} / 100` : route.id === recon.best.id && sf > 0.5 ? 'Scouting' : 'Unobserved';
         bar.style.width = `${observed ? route.score : 0}%`;
-        reason.textContent = observed ? route.reason : 'Awaiting scout observations';
+        reason.textContent = chosen ? 'Low-risk corridor · ready for the UGV' : observed ? route.reason : 'Awaiting scout observations';
       });
     };
     const setTab = (t: DemoTab) => {
@@ -653,6 +712,8 @@ const forceCaps = [
       flat.hidden = t !== 'ground' || hasAir;
       pilotPanel.hidden = t !== 'pilot';
       reconPanel.hidden = t !== 'forest';
+      deepSec.querySelector('[data-application-title]')!.textContent = `Application · ${
+        { forest: 'under-canopy reconnaissance', air: 'fixed-wing autonomy', ground: 'underground autonomy', pilot: 'manned pilot assistance' }[t]}`;
       deepSec.querySelector('.deep__tag--r')!.textContent = t === 'forest' ? 'Observed terrain · route assessment'
         : t === 'pilot' ? 'Terrain risk · trajectory assessment' : 'Belief · risk map';
       if (t === 'forest' && !forestLoading) {
@@ -817,6 +878,7 @@ const forceCaps = [
       });
       if (!covered && !document.hidden) {
         scene.frame(dt, cur);
+        updateAnnotations(cur, scene);
         if (first) {
           canvas.classList.add('is-ready');
           first = false;
@@ -965,6 +1027,32 @@ const forceCaps = [
     font-size: clamp(28px, 3.4vw, 52px);
     max-width: 18em;
   }
+  .reason__annotations {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    color: #b7d9dc;
+  }
+  .reason__annotations[hidden],
+  .reason__callout[hidden] { display: none; }
+  .reason__arrows { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .reason__arrows > path { fill: none; stroke: currentColor; stroke-width: 1.2; opacity: 0.8; }
+  .reason__callout {
+    position: absolute;
+    display: grid;
+    gap: 6px;
+    max-width: 230px;
+    padding: 11px 14px;
+    border-left: 2px solid currentColor;
+    background: rgba(6, 10, 12, 0.88);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .reason__callout strong { color: var(--fg); font-weight: 500; }
+  .reason__callout span { color: var(--fg-dim); }
+  .reason__callout--feature { top: 29%; right: var(--pad); }
+  .reason__callout--robot { top: 69%; right: 13%; }
   .rail {
     position: relative;
     align-self: end;
@@ -1334,7 +1422,7 @@ const forceCaps = [
   .deep__pilot-label {
     display: none;
     position: absolute;
-    top: 150px;
+    top: 198px;
     left: var(--pad);
     margin: 0;
     font-size: 10px;
@@ -1433,14 +1521,59 @@ const forceCaps = [
     text-transform: uppercase;
   }
   .deep__tag--r {
-    top: 150px;
+    top: 198px;
   }
   .deep__hud {
-    top: 178px;
+    top: 226px;
   }
+  .deep__product {
+    position: absolute;
+    top: 77px;
+    left: var(--pad);
+    right: var(--pad);
+    z-index: 3;
+    text-align: center;
+    pointer-events: none;
+  }
+  .deep__product h2 { margin: 0; font-size: 12px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
+  .deep__product p { margin: 5px 0 0; font-size: 12px; color: var(--fg-dim); }
+  .deep__development {
+    display: inline-block;
+    margin-left: 9px;
+    padding: 3px 7px;
+    border: 1px solid rgba(255, 179, 71, 0.4);
+    color: var(--accent);
+    font-size: 9px;
+    vertical-align: middle;
+  }
+  .deep__recon-cut {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 50%; height: 100%;
+    align-items: center; justify-content: center;
+    background: #060b0d;
+    opacity: var(--recon-cut-opacity, 0);
+    pointer-events: none;
+    z-index: 1;
+    color: #bce5c9;
+    font-size: 13px;
+  }
+  .deep[data-tab='forest'] .deep__recon-cut { display: flex; }
+  .deep__recon-path-label {
+    display: none;
+    position: absolute;
+    transform: translate(8px, -120%);
+    padding: 6px 9px;
+    border-left: 2px solid #9ae3b4;
+    background: rgba(6, 17, 12, 0.9);
+    color: #bce5c9;
+    font-size: 10px;
+    pointer-events: none;
+  }
+  .deep[data-tab='forest'] .deep__recon-path-label:not([hidden]) { display: block; }
   .deep__switch {
     position: absolute;
-    top: 78px;
+    top: 138px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 3;
@@ -1595,6 +1728,9 @@ const forceCaps = [
   }
 
   @media (max-width: 760px) {
+    .reason__callout { max-width: 185px; padding: 8px 10px; gap: 3px; font-size: 10px; }
+    .reason__callout--feature { top: 33%; right: var(--pad); }
+    .reason__callout--robot { top: 46%; right: auto; left: var(--pad); }
     .vignette {
       background: linear-gradient(0deg, rgba(6, 7, 8, 0.9) 0%, rgba(6, 7, 8, 0.3) 60%, rgba(6, 7, 8, 0.4) 100%);
     }
@@ -1659,6 +1795,7 @@ const forceCaps = [
       gap: 4px;
       padding: 4px;
       border-radius: 20px;
+      top: 118px;
     }
     .deep__badge {
       display: none;
@@ -1676,9 +1813,15 @@ const forceCaps = [
       grid-column: 1 / -1;
     }
     .deep__pilot-label {
-      top: 170px;
+      top: 205px;
       font-size: 9px;
     }
+    .deep__product { top: 74px; }
+    .deep__product h2 { font-size: 10px; }
+    .deep__product p { margin-top: 3px; font-size: 10px; }
+    .deep__development { font-size: 8px; padding: 2px 5px; }
+    .deep__recon-cut { width: 100%; height: 50%; }
+    .deep[data-tab='forest'] .deep__recon-path-label:not([hidden]) { display: none; }
     .deep[data-tab='pilot'] .deep__shade,
     .deep[data-tab='forest'] .deep__shade {
       background:
