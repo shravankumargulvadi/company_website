@@ -57,7 +57,7 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
 - **Scene annotations:** Perception, Belief and Risk show plain-language HTML callouts pointing to sensor returns, mapped contours and raised risk peaks. They hide immediately during scrolling and reappear after a 450 ms pause once the scene has settled. Each visible callout stays attached to one terrain feature. No-WebGL mode keeps the explanatory rail without misleading 3D arrows.
 - **Placeholder vs production-ready:** procedural terrain, line-art machines and proof renders are placeholders; the scroll/scene architecture, handoff and fallbacks are close to production. Tune on real GPUs and do a mobile art-direction pass before launch.
 
-### Fieldcore OS chapter (Under-canopy / Fixed-wing / Underground / Pilot assistance tabs)
+### Fieldcore OS chapter (Scout the route / Stay unseen / Explore safely / Land safely tabs)
 
 Inspired by a reference risk-estimation capture kept locally in `reference_material/` (git-ignored; **not** committed, embedded or shipped).
 
