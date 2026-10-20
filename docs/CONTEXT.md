@@ -22,10 +22,8 @@ Never position it as only a UGV, drone, hardware, swarm or generic-AI company.
 - Repo: https://github.com/shravankumargulvadi/company_website.
 - PR #1 is merged; it created the original exploration with candidates A, B and C.
 - PR #2 (https://github.com/shravankumargulvadi/company_website/pull/2) is open, on branch `devin/1792319361-consolidate-a`. It holds all the consolidation work below. Do not merge unless asked.
-- Candidate **A** (`/candidate-a`) is the primary site.
-- Candidate **B** has been deleted.
-- Candidate **C** (`/candidate-c`) is kept only as a reference; its bird's-eye zoom now lives inside A. Remove C when the founder says.
-- `/` is an internal index. The review switcher pill was removed (`switcher` defaults to false in `src/layouts/Base.astro`).
+- Candidate **A** is the site and is served at `/` (`src/pages/index.astro`). The candidate index, switcher and Candidates B and C have been removed; `/candidate-a` and `/candidate-c` redirect to `/` (`astro.config.mjs`).
+- C's bird's-eye zoom lives on inside the page as `src/components/candidate-a/forceScene.ts`.
 
 ## Stack
 - Astro 5 (static), TypeScript strict, plain CSS, GSAP + ScrollTrigger, vanilla Three.js (lazy-loaded), Canvas 2D.
@@ -34,7 +32,7 @@ Never position it as only a UGV, drone, hardware, swarm or generic-AI company.
 - If the browser shows 504 "Outdated Optimize Dep", restart the dev server with `npx astro dev --port 4321 --host --force`.
 - Don't `pkill -f "astro dev"` in the same shell command as other work: it kills that shell too.
 
-## Page order of /candidate-a (`src/pages/candidate-a.astro`)
+## Page order of / (`src/pages/index.astro`)
 All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `SceneState` that feeds `src/components/candidate-a/sceneA.ts`.
 
 1. **Hero:** "Deterrence through autonomy." A cursor lens shows the machine's view of the terrain.
@@ -46,9 +44,10 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
    - The fields come from `createWorld({hazards:true})`, which adds `ambiguity` and threat, and they also feed `riskAt`, so the planned path is real.
 4. **03 Connected:** the UGV arrives at `A_GOAL` and stops. A comms arc rises towards `A_HUB`, and the camera turns straight top-down (`bev`).
    - The UGV's progress (`drive`) is tied **linearly to scroll** from the top of the page, so it never rushes. The founder disliked the earlier fast catch-up.
-5. **04–07 bird's-eye force chapter:** a fixed Canvas 2D `ForceScene` (from `src/components/candidate-c/sceneC.ts`) runs on A's world.
+5. **04–07 bird's-eye force chapter:** a fixed Canvas 2D `ForceScene` (`src/components/candidate-a/forceScene.ts`, originally Candidate C) runs on A's world.
    - It cross-fades in at the same spot and scale. Start zoom is `z0 = 2·dist·tan(fov/2)/EXTENT`; shared constants are in `worldA.ts`.
    - While `move < 0.01`, the 2D hero is snapped to the 3D UGV via `setHero`.
+   - At the handoff, the `engine` ring (copied from Candidate C at the founder's request) orbits the UGV, cycling Perceive → Believe → Assess risk → Plan → Act. `engine` is 1 at the first force stage and fades to 0 by Shunya OS; it also rings the other machines while they share the loop.
    - Captions:
      - 04 Fieldcore OS (one autonomy, many bodies)
      - 05 Autonomous teams
@@ -88,7 +87,7 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
 - The deterrence section's backdrop is very dark.
 - Mobile was checked only partly, at 390×844 earlier. The tabs and deterrence section are unchecked on mobile.
 - The no-WebGL fallback has not been re-checked; the Air tab is hidden there. Real-GPU performance is unmeasured; everything was tested with software WebGL.
-- Placeholders: contact email in `src/config/site.ts`, procedural terrain, line-art glyphs. The company name is Rta Systems.
+- Contact form: Web3Forms key `contactFormKey` in `src/config/site.ts` forwards to the founder’s inbox (the form shows a not-available message if it is empty). Placeholders: procedural terrain, line-art glyphs. The company name is Rta Systems.
 - Current environment has no browser connected to the computer-use tool; visual screenshots cannot be claimed from the current run. Model, geometry, build and TypeScript checks are available. The documented `~/.nvm/nvm.sh` is also absent here; use installed Node when that startup file is unavailable.
 
 ## Verification tips

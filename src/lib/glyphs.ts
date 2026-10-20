@@ -1,6 +1,6 @@
 /**
  * Embodiment glyphs as SVG path data, rendered on Canvas via Path2D
- * (candidate A fallback and BEV chapter, candidate C).
+ * (3D fallback and bird's-eye force chapter).
  * Placeholder line art — replace with final illustrations later.
  */
 import type { EmbodimentId } from './world';

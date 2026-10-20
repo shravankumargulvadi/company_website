@@ -1,0 +1,203 @@
+---
+import { site } from '../../config/site';
+---
+
+<dialog class="contact" id="contact-dialog" aria-labelledby="contact-title" data-key={site.contactFormKey}>
+  <form class="contact__form" novalidate>
+    <div class="contact__head">
+      <h2 id="contact-title" class="contact__title">Get in touch</h2>
+      <button type="button" class="contact__close" data-close aria-label="Close">×</button>
+    </div>
+    <label class="contact__field">
+      <span>Topic</span>
+      <select name="topic">
+        <option value="Partnership">Partnership</option>
+        <option value="Careers">Joining the team</option>
+        <option value="General">Something else</option>
+      </select>
+    </label>
+    <label class="contact__field">
+      <span>Name</span>
+      <input name="name" type="text" autocomplete="name" required maxlength="120" />
+    </label>
+    <label class="contact__field">
+      <span>Email</span>
+      <input name="email" type="email" autocomplete="email" required maxlength="200" />
+    </label>
+    <label class="contact__field">
+      <span>Message</span>
+      <textarea name="message" rows="5" required maxlength="5000"></textarea>
+    </label>
+    <input class="contact__trap" type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" aria-hidden="true" />
+    <div class="contact__foot">
+      <p class="contact__status" role="status" aria-live="polite"></p>
+      <button type="submit" class="btn">Send</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  const dialog = document.getElementById('contact-dialog') as HTMLDialogElement | null;
+  const form = dialog?.querySelector('form');
+  const status = dialog?.querySelector<HTMLElement>('.contact__status');
+  const submit = dialog?.querySelector<HTMLButtonElement>('button[type="submit"]');
+  const topicField = dialog?.querySelector<HTMLSelectElement>('select[name="topic"]');
+
+  if (dialog && form && status && submit && topicField && typeof dialog.showModal === 'function') {
+    const say = (text: string) => (status.textContent = text);
+
+    document.querySelectorAll<HTMLElement>('[data-contact]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        const topic = el.dataset.contact;
+        if (topic) topicField.value = topic;
+        say('');
+        dialog.showModal();
+      });
+    });
+
+    dialog.querySelector('[data-close]')?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+      const key = dialog.dataset.key;
+      if (!key) {
+        say('The contact form isn’t available yet. Please check back soon.');
+        return;
+      }
+      const data = new FormData(form);
+      if (data.get('botcheck')) return;
+      submit.disabled = true;
+      say('Sending…');
+      try {
+        const res = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            access_key: key,
+            subject: `Website: ${data.get('topic')}`,
+            from_name: 'Rta Systems website',
+            topic: data.get('topic'),
+            name: data.get('name'),
+            email: data.get('email'),
+            message: data.get('message'),
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.success) throw new Error(json.message || res.statusText);
+        form.reset();
+        say('Thanks — your message has been sent.');
+      } catch {
+        say('Something went wrong. Please try again in a moment.');
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  }
+</script>
+
+<style>
+  .contact {
+    width: min(480px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--bg);
+    color: var(--fg);
+  }
+  .contact::backdrop {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+  .contact__form {
+    display: grid;
+    gap: 16px;
+    padding: 24px;
+  }
+  .contact__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .contact__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 28px;
+  }
+  .contact__close {
+    border: 0;
+    background: none;
+    color: var(--fg-dim);
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .contact__close:hover {
+    color: var(--fg);
+  }
+  .contact__field {
+    display: grid;
+    gap: 6px;
+  }
+  .contact__field > span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .contact__field :is(input, select, textarea) {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(235, 231, 222, 0.04);
+    color: var(--fg);
+    font: inherit;
+  }
+  .contact__field :is(input, select, textarea):focus {
+    border-color: var(--fg-dim);
+    outline: none;
+  }
+  .contact__field select option {
+    background: var(--bg);
+  }
+  .contact__field textarea {
+    resize: vertical;
+  }
+  .contact__trap {
+    position: absolute;
+    left: -9999px;
+  }
+  .contact__foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .contact__status {
+    margin: 0;
+    font-size: 14px;
+    color: var(--fg-dim);
+  }
+  .contact .btn {
+    background: none;
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .contact .btn:hover,
+  .contact .btn:focus-visible {
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .contact .btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+</style>

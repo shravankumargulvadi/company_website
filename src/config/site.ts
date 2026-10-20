@@ -4,10 +4,6 @@ export const site = {
   wordmark: 'RTA SYSTEMS',
   tagline: 'Deterrence through autonomy.',
   description: 'Building autonomous machines for the most difficult environments.',
-  contactEmail: 'contact@example.com',
+  /** Web3Forms access key; messages are forwarded to the inbox registered with it. Safe to publish. */
+  contactFormKey: 'a0df6a40-80fd-46df-834c-d201d918c8c8',
 };
-
-export const candidates = [
-  { slug: 'candidate-a', letter: 'A', title: "The Machine's Eyes" },
-  { slug: 'candidate-c', letter: 'C', title: 'From One Machine to a Force' },
-] as const;
