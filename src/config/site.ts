@@ -5,5 +5,5 @@ export const site = {
   tagline: 'Deterrence through autonomy.',
   description: 'Building autonomous machines for the most difficult environments.',
   /** Web3Forms access key; messages are forwarded to the inbox registered with it. Safe to publish. */
-  contactFormKey: '',
+  contactFormKey: 'a0df6a40-80fd-46df-834c-d201d918c8c8',
 };
