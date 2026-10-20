@@ -1,14 +1,15 @@
-# Company website — exploration prototypes
+# Rta Systems — website exploration prototypes
 
-Three independent one-page website candidates for the company thesis **"Deterrence through autonomy."** They are exploration prototypes, not a finished site. Each one tests a different narrative and interaction direction so we can choose a production direction later. None of them has been picked as the winner.
+The company name comes from Sanskrit **Ṛta (ऋत)**, the principle of cosmic order or truth and a Vedic antecedent of dharma. The brand uses **Rta Systems**, with **RTA SYSTEMS** as its wordmark.
+
+One-page website prototypes for the company thesis **"Deterrence through autonomy."** **Candidate A is the primary direction** and now absorbs Candidate C's bird's-eye force chapter. Candidate B has been dropped. Candidate C stays up as a reference while its pieces move into A.
 
 | Route | Candidate | One-line idea |
 | --- | --- | --- |
 | `/candidate-a` | **The Machine's Eyes** | See the world the way the machine does: reality → perception → belief → risk → decision |
-| `/candidate-b` | **The Autonomy Machine** | The architecture is the protagonist; the system assembles itself as you scroll |
 | `/candidate-c` | **From One Machine to a Force** | One continuous zoom-out, from a single machine to a distributed, human-supervised force |
 
-`/` is an internal index that links the three. A small pill in the bottom-left corner of every page switches between candidates; it is for review only.
+`/` is an internal index that links the candidates. A small pill in the bottom-left corner of every page switches between candidates; it is for review only.
 
 ## Running
 
@@ -17,6 +18,7 @@ npm install
 npm run dev       # http://localhost:4321
 npm run build     # static output in dist/
 npm run check     # astro + TypeScript diagnostics
+npm test          # reconnaissance, landing assessment and motion checks
 ```
 
 Requires Node 18.17+ (developed on Node 24).
@@ -26,12 +28,12 @@ Requires Node 18.17+ (developed on Node 24).
 - **Astro 5** with static output and no UI framework, plus **TypeScript** in strict mode.
 - **GSAP + ScrollTrigger** for scroll choreography.
 - **Three.js**, used only by Candidate A and lazy-loaded with custom shaders.
-- **Canvas 2D** (Candidate C) and **SVG** (Candidate B), so each candidate also tests a different rendering approach and performance profile.
-- Self-hosted fonts via Fontsource: Instrument Serif (A), Space Grotesk (B), Inter Tight (C), IBM Plex Mono (shared).
+- **Canvas 2D** for the bird's-eye force view (Candidate A chapter 04–07, Candidate C) and the no-WebGL fallbacks.
+- Self-hosted fonts via Fontsource: Instrument Serif (A), Inter Tight (C), IBM Plex Mono (shared).
 
 ### Shared simulation layer (`src/lib/`)
 
-All three candidates draw from the same small, deterministic model of an autonomy problem, so the visuals stay technically honest and are not just decoration:
+Both candidates draw from the same small, deterministic model of an autonomy problem, so the visuals stay technically honest and are not just decoration:
 
 - `noise.ts`: seeded simplex noise and fBm.
 - `world.ts`: procedural terrain (height, slope, water, threat envelopes); **embodiment-specific risk profiles** (`PROFILES` for ground, air, legged, maritime); a `KnowledgeMap` of what has been observed, which decays over time; a constant-curvature **arc planner** scored on risk plus progress (`planArcs`); and receding-horizon `rollout`. Unknown space is always *priced as risk*, never treated as free space. This is the thesis expressed in code.
@@ -45,42 +47,32 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
 
 ## Candidate A — The Machine's Eyes
 
-**Files:** `src/pages/candidate-a.astro`, `src/components/candidate-a/sceneA.ts`
+**Files:** `src/pages/candidate-a.astro`, `src/components/candidate-a/` (`sceneA.ts`, `deepScene.ts`, `worldA.ts`)
 
-- **Storytelling concept:** the visitor alternates between the physical world and the machine's internal understanding of it. Its intended reaction is *"This company sees autonomy differently."*
-- **Visual metaphor:** a lens. The hero is a dark, cinematic terrain. Moving the cursor opens a circular lens that shows the same ground as the machine perceives it.
-- **Major interaction:** a pinned, scroll-driven transformation of a single 3D terrain: **Reality → Perception** (lidar-like point cloud) **→ Belief** (contours plus the unknown) **→ Risk** (amber risk field with contours) **→ Decision** (fan of candidate trajectories, one selected and executed). A "structured world" mode (grid, roads, small UGV) sets up the contrast with defense environments. The camera then pulls back: the same scene re-weights risk for ground, air, legged and maritime machines, and finally shows a supervised team with orchestration links.
-- **Why it fits the thesis:** the signature moment is risk- and uncertainty-aware autonomy, shown on the terrain itself. The machine is small and the reasoning is large, so the page never reads as a UGV company.
-- **Primary technical implementation:** vanilla Three.js loaded on first paint, with one terrain mesh and a custom GLSL shader that blends reality, belief, risk and structured-world modes from uniforms. A `DataTexture` carries the live knowledge map, and points use a separate shader. Scroll keyframes (`KEYS`) are interpolated into a single `SceneState`. Small or low-concurrency devices get a lower-resolution mesh. If WebGL is unavailable, a Canvas 2D fallback renders the proof-style top-down view.
-- **Placeholder vs production-ready:**
-  - *Placeholder:* procedural terrain instead of real photogrammetry or captured data; line-art machine models; proof-reel renders.
-  - *Close to production:* the scroll and scene architecture, the shader pipeline, lens interaction, fallbacks and copy structure.
-  - *Before launch:* tune on real GPUs (only tested here on software WebGL), consider a photographic or video hero layer behind the "reality" state, and do a mobile art-direction pass.
+- **Storytelling concept:** the visitor alternates between the physical world and the machine's internal understanding of it, then zooms out from one machine to a force.
+- **Disclosure level:** the page shows risk- and uncertainty-aware autonomy at a high level only. Risk is described by its sources (terrain, ambiguous sensing, electronic warfare, the unknown), not by the internal risk terms or pipeline.
+- **Page order:**
+  1. Hero, the shift, a different world.
+  2. **Reality → Perception → Belief → Risk → Decision** on one 3D terrain with a ground vehicle. At *Risk* the terrain lifts into a cost field: height is the combined risk, colour the source (terrain amber, ambiguous sensing violet, electronic warfare red). These fields also feed `riskAt`, so the planned path really avoids them.
+  3. **03 Connected:** the vehicle drives to its objective and stops, a comms link arcs from it towards the Shunya OS node, and the camera rises to straight top-down.
+  4. **04–07, bird's-eye force chapter:** once the 3D camera is top-down, a fixed Canvas 2D layer (Candidate C's `ForceScene`, run on A's world with the vehicle at the same spot and scale) cross-fades in and keeps zooming out: **Fieldcore OS** (the autonomy on every machine, many bodies), autonomous teams, human–machine teaming, and **Shunya OS**, the mission intelligence layer above it (swarm orchestration, AI-assisted mission planning, fleet management).
+  5. **09 Fieldcore OS:** under-canopy reconnaissance, fixed-wing, underground and pilot-assistance demos, see below.
+  6. Closing CTA.
+- **Implementation:** vanilla Three.js with one terrain mesh and a custom shader driven by scroll keyframes (`KEYS` → `SceneState`, including `comm` and `bev` for the handoff; the lead vehicle's progress `drive` is tied linearly to scroll so it arrives at the goal smoothly). `worldA.ts` holds the shared world options, goal and Shunya OS node so the 3D and 2D views line up. If WebGL is unavailable, a Canvas 2D fallback is used.
+- **Scene annotations:** Perception, Belief and Risk show plain-language HTML callouts pointing to sensor returns, mapped contours and raised risk peaks. They hide immediately during scrolling and reappear after a 450 ms pause once the scene has settled. Each visible callout stays attached to one terrain feature. No-WebGL mode keeps the explanatory rail without misleading 3D arrows.
+- **Placeholder vs production-ready:** procedural terrain, line-art machines and proof renders are placeholders; the scroll/scene architecture, handoff and fallbacks are close to production. Tune on real GPUs and do a mobile art-direction pass before launch.
 
-**Candidate A, risk stage (04):** the terrain lifts into a cost field (the `field` state in `src/components/candidate-a/sceneA.ts`). Height is the combined risk, and colour shows the type: slope (amber), obstacles (red), negative obstacles such as holes and ditches (violet). The hazards come from `createWorld({ hazards: true })` in `src/lib/world.ts` and also feed `riskAt`, so the planned path really routes around them.
+### Candidate A — Fieldcore OS chapter (Under-canopy / Fixed-wing / Underground / Pilot assistance tabs)
 
-### Candidate A — Underground chapter
+Inspired by the reference risk-estimation capture in `reference_material/` (it is **not** embedded or shipped).
 
-Chapter 03, after Reality → Decision. Inspired by the reference risk-estimation capture in `reference_material/` (it is **not** embedded or shipped).
-
-- **Story:** no GPS, no light, no map. The machine drives an unmapped passage and prices what it sees. Anything it hasn't seen is never treated as free.
-- **Interaction:** a pinned split screen. Scrolling drives the machine forward. Left: the machine's headlit camera view. Right: the 2.5D elevation/risk map built from its range sensor. Cells rise as they are observed. Cells seen from far away stay more expensive. Unobserved space stays hatched. The HUD shows distance travelled, % mapped and mean uncertainty.
-- **Implementation:** `src/lib/passage.ts` holds a deterministic passage model: a loop, a chamber, a dead-end branch, rubble, a ledge, a 360° range sensor with occlusion, and per-cell first/best observation. `src/components/candidate-a/deepScene.ts` draws two viewports from one WebGL context, with the map as instanced cells. `src/lib/passageMap2d.ts` provides the top-down Canvas fallback and also powers the "confined passage" proof placeholder.
-- **Placeholder vs production:** the geometry is procedural. A real capture can replace the proof placeholder via `src/config/proof.ts`.
-
-## Candidate B — The Autonomy Machine
-
-**Files:** `src/pages/candidate-b.astro`, `src/components/candidate-b/engineModel.ts`
-
-- **Storytelling concept:** the architecture itself is the visual protagonist. Its intended reaction is *"I understand exactly what they're building."*
-- **Visual metaphor:** an engineering drawing that comes to life. The hero is the autonomy loop as a living ring. A "structured vs contested" diagram pair explains the problem.
-- **Major interaction:** a pinned section that **assembles the Autonomy Engine** step by step. A machine and its sensors appear, then sensor rays and a point scan, then a world-belief grid where hatched cells are unknown and the frontier is marked. Next come the risk field, candidate trajectories with the selected plan, and the machine executing it. Finally a return arc closes the *Perceive → Build belief → Estimate risk → Plan → Act → Adapt* loop along a pipeline rail. The whole diagram then compresses into a single **Autonomy Engine** chip. That chip splits into four, each sitting on an embodiment-specific *platform dynamics · control* layer above ground, air, legged and maritime machines. An **Orchestration OS** bar and *mission intent / human supervision* drop in above them, with live task (↓) and state (↑) pulses.
-- **Why it fits the thesis:** it is the clearest explanation of the two product layers and of the shared/specific split: reasoning architecture is shared, while dynamics, controllers and risk weights are per-embodiment. Both are labelled in the diagram.
-- **Primary technical implementation:** the diagram is pure SVG generated **at build time** in Astro frontmatter. The belief grid, unknown cells, risk colours, scan points and planner candidates are computed by running the shared `world.ts` planner during the build, so the browser receives static SVG with no runtime simulation cost. One GSAP timeline, pinned and scrubbed, choreographs layers. CSS keyframes drive continuous motion (sensor flow, pulses). This is the lightest page and needs no WebGL.
-- **Placeholder vs production-ready:**
-  - *Placeholder:* embodiment glyphs, sensor names and the proof reel.
-  - *Close to production:* the diagram system, build-time generation, timeline, responsive layout and accessible text (captions are real HTML).
-  - *Before launch:* have engineering confirm the module names and sensor list, and replace glyphs with final illustrations.
+- **Product framing:** a persistent **Fieldcore OS · In development** heading owns the development status. The four tabs are labelled as applications of the same autonomy system.
+- **Under-canopy route reconnaissance (first tab):** a quadrotor launches from a parked UGV's deck and scouts a dense forest for hazards and choke points. It investigates fallen timber and a steep drainage cut, then scouts the eastern corridor through to the exit. The scouted route gains a green surface highlight and a **Low risk** label before the UGV moves. The camera hands over to follow the UGV along that corridor, with the ground team behind it. `src/lib/forestRecon.ts` shares the seeded tree layout, terrain, route scores, launch height, flight, observation frontier and vehicle/team handoff; `forestScene.ts` and `forestMap2d.ts` render the same sequence in WebGL and Canvas.
+- **Ground tab:** no GPS, no light, no map. A chase camera follows the rover to a fork. It starts down the short direct branch, sees a drop (only visible up close), reverses out and takes the long, low-risk detour.
+- **Air tab:** `src/components/candidate-a/airScene.ts`. A fixed-wing machine flies low through a canyon, detects a radar (electronic warfare risk) covering its planned branch, and re-plans into the other canyon, keeping terrain between itself and the emitter.
+- **Pilot assistance tab:** `src/components/candidate-a/landingScene.ts`. A gear-mounted optical camera looks forward beneath a manned aircraft through dusk and fog. Landing lights reveal textured soil, gravel, stones and stubble at short range; the undercarriage frames the image. The risk view evaluates 128 sampled approaches (64 on lower-power devices), colors them by terrain/control cost and exponential importance weight, and draws their weighted mean. The sampled horizon begins at the current aircraft pose, concentrates around the accepted corridor, and closes as the aircraft touches down. `src/lib/landing.ts` shares the height field, slope/roughness measurements, clearance, relative corridor scores and motion. The MPPI-style sampling is an illustrative assessment, not a flight controller. Reduced motion freezes temporal grain and resampling; the Canvas fallback preserves the dark camera treatment and trajectory cloud.
+- **Interaction:** a pinned split screen. Scrolling plays under-canopy reconnaissance, fixed-wing, underground, then pilot assistance; scrolling back reverses the sequence. Tabs jump to the start of each demo and support arrow keys, Home and End. Each demo gets its own full scroll range. Four tabs use a two-row layout on mobile. Underground, scrolling drives the machine to the fork, holds while both routes are assessed, then drives the detour. Without WebGL, reconnaissance, underground and pilot assistance remain available with Canvas fallbacks and three scroll ranges.
+- **Implementation:** `src/lib/passage.ts` is a deterministic passage model (entry tunnel, fork, a direct branch with a drop and rubble, a winding detour, goal chamber, range sensor with occlusion, per-cell first/best observation). `deepScene.ts` draws both viewports from one WebGL context. `passageMap2d.ts` is the Canvas fallback and the "confined passage" proof placeholder.
 
 ## Candidate C — From One Machine to a Force
 
@@ -88,7 +80,7 @@ Chapter 03, after Reality → Decision. Inspired by the reference risk-estimatio
 
 - **Storytelling concept:** a single continuous zoom-out that communicates the largest strategic ambition. Its intended reaction is *"This starts as autonomy software but can become infrastructure for autonomous warfare."*
 - **Visual metaphor:** a map that keeps getting bigger, read through a live scale bar (500 m → 5 km) and counters for machines, operators and teams.
-- **Major interaction:** one pinned, full-bleed canvas with nine stages and **one unbroken camera move**. It opens on one machine close up. Next come the contested world (threat envelopes, jamming, no GNSS, the unobserved fog of war), then uncertainty reasoning (live risk field and candidate arcs), then the Autonomy Engine loop orbiting the machine. Ground, air, legged and maritime machines appear, then a heterogeneous team that builds one shared belief, then an operator supervising the team. The camera ends on three teams, three operators and the Orchestration OS hub, with task and state traffic flowing over a 40 × 40 km area of operations. A rail on the right shows where you are in the zoom.
+- **Major interaction:** one pinned, full-bleed canvas with nine stages and **one unbroken camera move**. It opens on one machine close up. Next come the contested world (threat envelopes, jamming, no GNSS, the unobserved fog of war), then uncertainty reasoning (live risk field and candidate arcs), then the Autonomy Engine loop orbiting the machine. Ground, air, legged and maritime machines appear, then a heterogeneous team that builds one shared belief, then an operator supervising the team. The camera ends on three teams, three operators and the Shunya OS hub, with task and state traffic flowing over a 40 × 40 km area of operations. A rail on the right shows where you are in the zoom.
 - **Why it fits the thesis:** it is the only candidate that makes the step from autonomy engine to autonomous teams to force-level orchestration feel continuous and inevitable, and it still starts with the core technical idea of risk under uncertainty.
 - **Primary technical implementation:** Canvas 2D. Terrain is rasterised once into a full-map image plus a high-resolution detail patch, asynchronously and in chunks so the main thread is never blocked. Everything else is drawn live each frame: the hero machine runs the real receding-horizon planner against its own knowledge map; other machines follow pre-planned, embodiment-aware rollouts and reveal a shared, decaying belief map. Camera zoom is interpolated in log space between stage keyframes. Rendering pauses when off-screen. A low-power path uses smaller terrain and rasters.
 - **Placeholder vs production-ready:**
@@ -100,7 +92,7 @@ Chapter 03, after Reality → Decision. Inspired by the reference risk-estimatio
 
 ## Shared placeholders (replace before launch)
 
-- `src/config/site.ts`: company name (`COMPANY`), wordmark and contact email (`contact@example.com`).
+- `src/config/site.ts`: shared company name (`Rta Systems`) and wordmark (`RTA SYSTEMS`); contact email (`contact@example.com`) is still a placeholder.
 - `src/config/proof.ts` and `src/components/shared/ProofReel.astro`: proof items currently render procedural Canvas simulations labelled *"Placeholder — replace with capture"*. Put real MP4/WebM clips in `public/assets/proof/` and set `src` on each item.
 - `public/favicon.svg`: temporary mark.
 - `src/components/shared/CandidateSwitcher.astro` and `src/pages/index.astro`: review tooling only; remove for production.

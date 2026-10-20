@@ -15,31 +15,33 @@ export interface ForceState {
   cx: number; cy: number; z: number; follow: number;
   threats: number; fog: number; annot: number; risk: number; plans: number;
   engine: number; others: number; team: number; operator: number; network: number;
+  move: number; uplink: number;
 }
 
-const Z: ForceState = { cx: 0.5, cy: 0.5, z: 0.16, follow: 1, threats: 0, fog: 0, annot: 0, risk: 0, plans: 0, engine: 0, others: 0, team: 0, operator: 0, network: 0 };
-const k = (s: Partial<ForceState>): ForceState => ({ ...Z, ...s });
+const Z: ForceState = { cx: 0.5, cy: 0.5, z: 0.16, follow: 1, threats: 0, fog: 0, annot: 0, risk: 0, plans: 0, engine: 0, others: 0, team: 0, operator: 0, network: 0, move: 1, uplink: 0 };
+/** Build a stage keyframe from defaults. */
+export const forceStage = (s: Partial<ForceState>): ForceState => ({ ...Z, ...s });
 
 /** One keyframe per narrative stage; the page maps scroll progress onto these. */
 export const STAGES: ForceState[] = [
-  k({ z: 0.14 }),
-  k({ z: 0.2, threats: 0.5 }),
-  k({ z: 0.34, follow: 0.6, threats: 1, fog: 1, annot: 1 }),
-  k({ z: 0.19, threats: 0.8, fog: 1, risk: 1, plans: 1 }),
-  k({ z: 0.15, threats: 0.5, fog: 1, risk: 0.45, plans: 1, engine: 1 }),
-  k({ z: 0.42, follow: 0.5, threats: 0.5, fog: 0.85, risk: 0.3, plans: 0.4, engine: 0.7, others: 1 }),
-  k({ z: 0.72, cx: 0.4, cy: 0.47, follow: 0, threats: 0.5, fog: 0.75, risk: 0.2, plans: 0.2, engine: 0.35, others: 1, team: 1 }),
-  k({ z: 0.84, cx: 0.37, cy: 0.5, follow: 0, threats: 0.4, fog: 0.65, risk: 0.15, engine: 0.2, others: 1, team: 1, operator: 1 }),
-  k({ z: 1.08, cx: 0.56, cy: 0.52, follow: 0, threats: 0.35, fog: 0.5, risk: 0.12, others: 1, team: 1, operator: 1, network: 1 }),
+  forceStage({ z: 0.14 }),
+  forceStage({ z: 0.2, threats: 0.5 }),
+  forceStage({ z: 0.34, follow: 0.6, threats: 1, fog: 1, annot: 1 }),
+  forceStage({ z: 0.19, threats: 0.8, fog: 1, risk: 1, plans: 1 }),
+  forceStage({ z: 0.15, threats: 0.5, fog: 1, risk: 0.45, plans: 1, engine: 1 }),
+  forceStage({ z: 0.42, follow: 0.5, threats: 0.5, fog: 0.85, risk: 0.3, plans: 0.4, engine: 0.7, others: 1 }),
+  forceStage({ z: 0.72, cx: 0.4, cy: 0.47, follow: 0, threats: 0.5, fog: 0.75, risk: 0.2, plans: 0.2, engine: 0.35, others: 1, team: 1 }),
+  forceStage({ z: 0.84, cx: 0.37, cy: 0.5, follow: 0, threats: 0.4, fog: 0.65, risk: 0.15, engine: 0.2, others: 1, team: 1, operator: 1 }),
+  forceStage({ z: 1.08, cx: 0.56, cy: 0.52, follow: 0, threats: 0.35, fog: 0.5, risk: 0.12, others: 1, team: 1, operator: 1, network: 1 }),
 ];
 
-export function stateAt(f: number): ForceState {
-  const n = STAGES.length - 1;
+export function stateAt(f: number, stages: ForceState[] = STAGES): ForceState {
+  const n = stages.length - 1;
   const x = clamp(f, 0, n);
   const i = Math.min(n - 1, Math.floor(x));
   const t = smoothstep(0.12, 0.88, x - i);
-  const a = STAGES[i];
-  const b = STAGES[i + 1];
+  const a = stages[i];
+  const b = stages[i + 1];
   const out = {} as ForceState;
   for (const key of Object.keys(a) as (keyof ForceState)[]) out[key] = lerp(a[key], b[key], t);
   out.z = Math.exp(lerp(Math.log(a.z), Math.log(b.z), t));
@@ -54,6 +56,22 @@ const WORLD_KM = 40;
 const DETAIL = { u: 0.2, v: 0.24, span: 0.42 };
 const BG = [8, 10, 11];
 
+export interface ForceOptions {
+  lowPower?: boolean;
+  /** Screen-space size multiplier for machines, operators and hub markers. */
+  markerScale?: number;
+  /** Blend the map boundary into the background instead of drawing an AO frame. */
+  softEdges?: boolean;
+  /** Use this world instead of Candidate C's default. */
+  world?: World;
+  /** Start pose for the lead machine. */
+  start?: Pose;
+  hub?: { u: number; v: number };
+  /** Centres of the two outer teams, and where their operators sit. */
+  teams?: { u: number; v: number }[];
+  operators?: { u: number; v: number }[];
+}
+
 export class ForceScene {
   readonly world: World;
   private ctx: CanvasRenderingContext2D;
@@ -65,6 +83,7 @@ export class ForceScene {
   private riskImg: HTMLCanvasElement;
   private riskDetail: HTMLCanvasElement;
   private fogImg: HTMLCanvasElement;
+  private edgeVeil?: HTMLCanvasElement;
   private fogData: ImageData;
   private know = new KnowledgeMap(128);
   private hero: Pose;
@@ -78,17 +97,28 @@ export class ForceScene {
   private time = 0;
   private frameNo = 0;
   private cam = { cx: 0.5, cy: 0.5 };
+  private markerScale: number;
   ready = false;
 
-  constructor(private canvas: HTMLCanvasElement, opts: { lowPower?: boolean } = {}) {
+  constructor(private canvas: HTMLCanvasElement, opts: ForceOptions = {}) {
     this.ctx = canvas.getContext('2d')!;
-    this.world = createWorld({ size: opts.lowPower ? 160 : 256, seed: 41, waterFraction: 0.1 });
+    this.markerScale = opts.markerScale ?? 1;
+    if (opts.softEdges) {
+      // Bake the feather once; composite it over terrain, risk and fog together.
+      this.edgeVeil = this.paint(256, 0, 0, 1, (u, v) => {
+        const fade = smoothstep(0.005, 0.14, Math.min(u, 1 - u))
+          * smoothstep(0.005, 0.14, Math.min(v, 1 - v));
+        return [...BG, (1 - fade) * 255];
+      });
+    }
+    this.world = opts.world ?? createWorld({ size: opts.lowPower ? 160 : 256, seed: 41, waterFraction: 0.1 });
+    if (opts.hub) this.hub = opts.hub;
     const w = this.world;
     const rand = mulberry32(5);
     const land = (u: number, v: number) => sample(w.water, w.size, u, v) < 0.2;
 
-    const start = findSpot(w, (u, v) => -riskAt(w, u, v, 1) * 2 - Math.hypot(u - 0.4, v - 0.45) * 8);
-    this.hero = { ...start, heading: -0.6 };
+    const start = opts.start ?? findSpot(w, (u, v) => -riskAt(w, u, v, 1) * 2 - Math.hypot(u - 0.4, v - 0.45) * 8);
+    this.hero = { u: start.u, v: start.v, heading: opts.start?.heading ?? -0.6 };
     this.cam = { cx: start.u, cy: start.v };
     this.waypoints = [[0.05, -0.05], [0.04, 0.05], [-0.05, 0.05], [-0.04, -0.05]].map(([du, dv]) => {
       const p = findSpot(w, (u, v) => -riskAt(w, u, v, 1) - Math.hypot(u - start.u - du, v - start.v - dv) * 10);
@@ -116,7 +146,7 @@ export class ForceScene {
     mk('ugv', near(start.u - 0.12, start.v - 0.1), 'team', 0);
     mk('uav', { u: start.u + 0.12, v: start.v + 0.1 }, 'team', 0);
     mk('ugv', near(start.u + 0.08, start.v - 0.14), 'team', 0);
-    const teams = [{ u: 0.8, v: 0.26 }, { u: 0.74, v: 0.78 }];
+    const teams = opts.teams ?? [{ u: 0.8, v: 0.26 }, { u: 0.74, v: 0.78 }];
     const mix: EmbodimentId[] = ['ugv', 'uav', 'legged', 'ugv', 'uav', 'uav'];
     teams.forEach((c, ti) => mix.forEach((id) => {
       const home = { u: c.u + (rand() - 0.5) * 0.18, v: c.v + (rand() - 0.5) * 0.18 };
@@ -124,8 +154,7 @@ export class ForceScene {
     }));
     this.operators = [
       { ...near(start.u - 0.1, start.v + 0.12), team: 0 },
-      { ...near(0.9, 0.16), team: 1 },
-      { ...near(0.6, 0.88), team: 2 },
+      ...(opts.operators ?? [{ u: 0.9, v: 0.16 }, { u: 0.6, v: 0.88 }]).map((o, i) => ({ ...near(o.u, o.v), team: i + 1 })),
     ];
 
     const riskPx = (u: number, v: number) => {
@@ -198,6 +227,12 @@ export class ForceScene {
     this.canvas.height = Math.round(this.H * this.dpr);
   }
 
+  /** Snap the lead machine (and camera) to a pose, e.g. to match another view. */
+  setHero(p: Pose) {
+    this.hero = { u: p.u, v: p.v, heading: p.heading };
+    this.cam = { cx: p.u, cy: p.v };
+  }
+
   private stepHero(dt: number) {
     const w = this.world;
     const goal = this.waypoints[this.heroGoal];
@@ -239,7 +274,7 @@ export class ForceScene {
     if (!this.ready) return;
     this.time += dt;
     this.frameNo++;
-    this.stepHero(dt);
+    if (s.move > 0.01) this.stepHero(dt * s.move);
     for (const a of this.agents) {
       a.pose = this.poseOf(a);
       const vis = this.visible(a, s);
@@ -259,7 +294,9 @@ export class ForceScene {
     const oy = H / 2 - this.cam.cy * K;
     const X = (u: number) => ox + u * K;
     const Y = (v: number) => oy + v * K;
-    const g = clamp(0.55 + (K - 700) / 3600, 0.55, 1.6);
+    const markerScale = this.markerScale;
+    const detailScale = Math.sqrt(markerScale);
+    const g = clamp(0.55 + (K - 700) / 3600, 0.55, 1.6) * markerScale;
 
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.fillStyle = `rgb(${BG.join(',')})`;
@@ -291,9 +328,11 @@ export class ForceScene {
       ctx.globalAlpha = 1;
     }
 
-    // Area of operations frame (visible once zoomed out past the map edge)
+    if (this.edgeVeil) ctx.drawImage(this.edgeVeil, X(0), Y(0), K, K);
+
+    // Candidate C retains its area-of-operations frame; A uses the soft boundary.
     const edge = smoothstep(0.75, 1.0, s.z);
-    if (edge > 0.01) {
+    if (!this.edgeVeil && edge > 0.01) {
       ctx.strokeStyle = `rgba(235,233,226,${0.22 * edge})`;
       ctx.lineWidth = 1;
       ctx.strokeRect(X(0), Y(0), K, K);
@@ -321,7 +360,7 @@ export class ForceScene {
     const mono = (px: number) => `500 ${px}px "IBM Plex Mono", ui-monospace, monospace`;
     const label = (txt: string, x: number, y: number, a: number, color = '235,233,226', px = 10) => {
       if (a < 0.02) return;
-      ctx.font = mono(px);
+      ctx.font = mono(px * detailScale);
       ctx.fillStyle = `rgba(${color},${a})`;
       ctx.fillText(txt, x, y);
     };
@@ -370,7 +409,22 @@ export class ForceScene {
     }
     ctx.restore();
 
-    // Network: operators <-> orchestration hub, with moving pulses
+    // Uplink: lead machine -> Shunya OS node
+    if (s.uplink > 0.01) {
+      const ux = X(this.hub.u), uy = Y(this.hub.v), mx = X(this.hero.u), my = Y(this.hero.v);
+      ctx.strokeStyle = `rgba(168,230,255,${0.7 * s.uplink})`;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(ux, uy); ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        const f = (this.time * 0.3 + i / 4) % 1;
+        ctx.fillStyle = `rgba(230,247,255,${s.uplink})`;
+        ctx.beginPath(); ctx.arc(lerp(mx, ux, f), lerp(my, uy, f), 2.2 * markerScale, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = `rgba(168,230,255,${0.8 * s.uplink * (1 - s.network)})`;
+      ctx.beginPath(); ctx.rect(ux - 6 * markerScale, uy - 6 * markerScale, 12 * markerScale, 12 * markerScale); ctx.stroke();
+    }
+
+    // Network: operators <-> Shunya OS hub, with moving pulses
     if (s.network > 0.01) {
       const hx = X(this.hub.u), hy = Y(this.hub.v);
       for (const [i, n] of this.operators.entries()) {
@@ -381,15 +435,15 @@ export class ForceScene {
           const t = (this.time * 0.35 + i * 0.27 + dir * 0.5) % 1;
           const f = dir ? t : 1 - t;
           ctx.fillStyle = dir ? `rgba(143,216,204,${s.network})` : `rgba(235,233,226,${s.network})`;
-          ctx.beginPath(); ctx.arc(lerp(hx, X(n.u), f), lerp(hy, Y(n.v), f), 2.2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(lerp(hx, X(n.u), f), lerp(hy, Y(n.v), f), 2.2 * markerScale, 0, Math.PI * 2); ctx.fill();
         }
       }
       ctx.strokeStyle = `rgba(143,216,204,${s.network})`;
       ctx.fillStyle = `rgba(8,10,11,${s.network})`;
-      ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.rect(hx - 9, hy - 9, 18, 18); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(hx, hy, 18 + Math.sin(this.time * 2) * 2, 0, Math.PI * 2); ctx.stroke();
-      label('ORCHESTRATION OS', hx + 28, hy + 4, s.network, '143,216,204', 11);
+      ctx.lineWidth = 1.4 * detailScale;
+      ctx.beginPath(); ctx.rect(hx - 9 * markerScale, hy - 9 * markerScale, 18 * markerScale, 18 * markerScale); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx, hy, (18 + Math.sin(this.time * 2) * 2) * markerScale, 0, Math.PI * 2); ctx.stroke();
+      label('SHUNYA OS', hx + 28 * markerScale, hy + 4 * detailScale, s.network, '143,216,204', 11);
       const centers = [0, 1, 2].map((t) => {
         const m = all.filter((a) => a.team === t);
         return { u: m.reduce((x, a) => x + a.pose.u, 0) / m.length, v: m.reduce((x, a) => x + a.pose.v, 0) / m.length, n: m.length + (t === 0 ? 1 : 0) };
@@ -402,11 +456,12 @@ export class ForceScene {
       const x = X(n.u), y = Y(n.v);
       ctx.strokeStyle = `rgba(235,233,226,${a})`;
       ctx.fillStyle = `rgba(8,10,11,${a})`;
-      ctx.lineWidth = 1.3;
-      ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 9, y); ctx.lineTo(x, y + 9); ctx.lineTo(x - 9, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1.3 * detailScale;
+      const r = 9 * markerScale;
+      ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = `rgba(235,233,226,${a})`;
-      ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill();
-      label('OPERATOR', x + 14, y + 4, 0.8 * a);
+      ctx.beginPath(); ctx.arc(x, y, 2.4 * markerScale, 0, Math.PI * 2); ctx.fill();
+      label('OPERATOR', x + 14 * markerScale, y + 4 * detailScale, 0.8 * a);
     }
 
     // Hero: trail, sensing footprint, candidate plans, engine ring
@@ -470,19 +525,20 @@ export class ForceScene {
       const vis = this.visible(a, s);
       if (vis < 0.02) continue;
       const x = X(a.pose.u), y = Y(a.pose.v);
-      if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
+      const margin = 40 * markerScale;
+      if (x < -margin || y < -margin || x > W + margin || y > H + margin) continue;
       ctx.fillStyle = `rgba(8,10,11,${0.9 * vis})`;
       ctx.beginPath(); ctx.arc(x, y, 13 * g, 0, Math.PI * 2); ctx.fill();
       if (s.engine > 0.05 && a.group === 'others') {
         ctx.strokeStyle = `rgba(143,216,204,${0.6 * s.engine * vis})`;
         ctx.beginPath(); ctx.arc(x, y, 22 * g, 0, Math.PI * 2); ctx.stroke();
       }
-      drawGlyph(ctx, PLAN_GLYPHS[a.id], x, y, a.pose.heading, 0.85 * g, `rgba(235,233,226,${vis})`, 1.3);
+      drawGlyph(ctx, PLAN_GLYPHS[a.id], x, y, a.pose.heading, 0.85 * g, `rgba(235,233,226,${vis})`, 1.3 * detailScale);
       if (a.group === 'others') label(typeLabel[a.id], x + 18 * g, y - 12 * g, 0.75 * vis * (1 - s.network));
     }
     ctx.fillStyle = 'rgba(8,10,11,0.9)';
     ctx.beginPath(); ctx.arc(hx, hy, 14 * g, 0, Math.PI * 2); ctx.fill();
-    drawGlyph(ctx, PLAN_GLYPHS.ugv, hx, hy, this.hero.heading, 0.95 * g, '#ebe9e2', 1.5);
+    drawGlyph(ctx, PLAN_GLYPHS.ugv, hx, hy, this.hero.heading, 0.95 * g, '#ebe9e2', 1.5 * detailScale);
     if (s.others > 0.05) label('GROUND', hx + 18 * g, hy - 12 * g, 0.75 * s.others * (1 - s.network));
   }
 

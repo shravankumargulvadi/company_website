@@ -25,7 +25,7 @@ export const proofItems: ProofItem[] = [
   {
     id: 'passage',
     label: 'Risk estimation, confined passage',
-    caption: '2.5D elevation and risk map built from range data as a ground vehicle drives an unmapped passage.',
+    caption: 'Risk map built as a ground vehicle drives an unmapped passage.',
     placeholder: 'passage',
   },
   {

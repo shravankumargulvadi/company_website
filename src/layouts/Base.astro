@@ -12,11 +12,11 @@ import { site } from '../config/site';
 interface Props {
   title?: string;
   description?: string;
-  theme: 'index' | 'a' | 'b' | 'c';
+  theme: 'index' | 'a' | 'c';
   switcher?: boolean;
 }
 
-const { title, description = site.description, theme, switcher = true } = Astro.props;
+const { title, description = site.description, theme, switcher = false } = Astro.props;
 const fullTitle = title ? `${title} — ${site.name}` : `${site.name} — ${site.tagline}`;
 ---
 
