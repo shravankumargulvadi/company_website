@@ -166,30 +166,60 @@ const AMBER: RGB = [1, 0.55, 0.16];
 function haul(): FieldDemo {
   const n1 = createNoise2D(31);
   const n2 = createNoise2D(47);
+  const n3 = createNoise2D(13);
   const main: V2[] = [[27, 60], [27, 50], [27, 42], [27, 36]];
   const planned: V2[] = [[27, 36], [27, 26], [27, 16], [27, 6]];
   const detour: V2[] = [[27, 36], [30.5, 32], [32.5, 26], [32.5, 20], [30, 14], [27, 9], [27, 6]];
   const hz: V2 = [27, 27];
+  /* The haul road is a bench cut into the pit wall: benches climb on the left, the pit drops away on the right. */
+  const parts = (x: number, z: number) => {
+    const e = x + fbm(n2, z * 0.06, 0.5, 2) * 1.6;
+    let y = (z - 30) * 0.05;
+    for (let k = 0; k < 4; k++) {
+      const c = 22 - 5.5 * k + fbm(n1, z * 0.09, k * 3.1, 2) * 1.4;
+      y += 4.2 * (1 - sstep(c - 1.5, c, e));
+      y += 0.7 * Math.max(0, 0.5 + fbm(n3, z * 0.35, k * 5.3, 2)) * Math.exp(-(((e - c - 0.4) / 0.8) ** 2));
+    }
+    for (let k = 0; k < 3; k++) {
+      const c = 38.6 + 6.5 * k + fbm(n1, z * 0.08, 9 + k * 2.7, 2) * 1.3;
+      y -= 4.6 * sstep(c, c + 1.7, e);
+      y += 0.55 * Math.max(0, 0.5 + fbm(n3, z * 0.3, 20 + k * 4.1, 2)) * Math.exp(-(((e - c - 2.1) / 0.9) ** 2));
+    }
+    /* safety berm along the crest of the drop */
+    y += 0.75 * (0.75 + 0.35 * fbm(n3, z * 0.4, 3.3, 2)) * Math.exp(-(((e - 37.7) / 0.55) ** 2));
+    const road = sstep(22.6, 23.6, e) * (1 - sstep(36.4, 37.3, e));
+    y += fbm(n1, x * 0.9, z * 0.9, 3) * (0.04 + 0.32 * (1 - road)) + fbm(n2, x * 0.3, z * 0.3, 2) * 0.12;
+    /* a fresh scar in the wall above, and the fan of rock it shed onto the road */
+    const scar = Math.exp(-(((z - hz[1]) / 2.6) ** 2)) * sstep(8, 13, e) * (1 - sstep(19, 21.6, e));
+    y -= 1.5 * scar;
+    const fan = sstep(18.5, 21.5, e) * (1 - sstep(27.4, 30, e)) * Math.exp(-(((z - hz[1]) / (2 + Math.max(0, e - 21) * 0.38)) ** 2));
+    y += fan * (0.3 + 0.6 * Math.max(0, fbm(n1, x * 1.4, z * 1.4, 2) + 0.35));
+    return { y, e, road, scar, fan };
+  };
+  const height = (x: number, z: number) => parts(x, z).y;
   return {
-    id: 'haul', extent: 60, main, planned, detour, mapTop: 8, sensor: 14, hazardAt: hz, blocked: true,
+    id: 'haul', extent: 60, main, planned, detour, mapTop: 18, sensor: 14, hazardAt: hz, blocked: true,
     hazards: [{ x: hz[0], z: hz[1], r: 3.6, color: AMBER }],
-    height(x, z) {
-      const e = x + fbm(n2, z * 0.06, 0.5, 2) * 1.6;
-      let y = (z - 30) * 0.06;
-      for (let k = 0; k < 3; k++) y += 3.2 * (1 - sstep(20.2 - 8 * k, 21.8 - 8 * k, e));
-      for (let k = 0; k < 2; k++) y -= 3.2 * sstep(38.2 + 8 * k, 39.8 + 8 * k, e);
-      y += 0.55 * Math.exp(-(((e - 22.4) / 0.5) ** 2)) + 0.55 * Math.exp(-(((e - 37.6) / 0.5) ** 2));
-      const road = e > 22 && e < 38;
-      y += fbm(n1, x * 0.5, z * 0.5, 2) * (road ? 0.03 : 0.14);
-      y += Math.max(0, fbm(n1, x * 1.6, z * 1.6, 2)) * 0.6 * Math.exp(-((x - hz[0]) ** 2 + (z - hz[1]) ** 2) / 5);
-      return y;
-    },
+    height,
     color(x, z) {
-      const e = x + fbm(n2, z * 0.06, 0.5, 2) * 1.6;
-      const g = 0.34 + fbm(n2, x * 1.4, z * 1.4, 2) * 0.05;
-      if (e > 23 && e < 37) return [g * 1.22, g * 1.1, g * 0.95];
-      const band = 0.04 * Math.sin(z * 0.9 + fbm(n1, x * 0.3, z * 0.3, 2) * 3);
-      return [g * 1.28 + band, g * 1.0 + band, g * 0.74];
+      const { y, e, road, scar, fan } = parts(x, z);
+      const q = 0.35;
+      const slope = Math.hypot(height(x + q, z) - height(x - q, z), height(x, z + q) - height(x, z - q)) / (2 * q);
+      const g = 0.36 + fbm(n2, x * 1.4, z * 1.4, 2) * 0.06;
+      const band = 0.05 * Math.sin(y * 2.3 + fbm(n1, x * 0.2, z * 0.2, 2) * 2.5);
+      const face: RGB = [0.44 + band, 0.34 + band * 0.9, 0.27 + band * 0.7];
+      const top: RGB = [g * 1.25, g * 1.04, g * 0.8];
+      const rut = Math.min(...[26.1, 27.9, 31.6, 33.4].map((l) => Math.abs(e - l))) < 0.28 ? 0.9 : 1;
+      const lane: RGB = [g * 1.38 * rut, g * 1.24 * rut, g * 1.06 * rut];
+      const t = sstep(0.55, 1.1, slope);
+      let c: RGB = [0, 1, 2].map((i) => {
+        const flat = top[i] + (lane[i] - top[i]) * road;
+        return flat + (face[i] - flat) * t;
+      }) as RGB;
+      const mix = (a: RGB, b: RGB, k: number): RGB => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+      c = mix(c, [0.58, 0.48, 0.38], Math.min(1, scar * 0.8));
+      c = mix(c, [0.3, 0.26, 0.22], Math.min(1, fan * 0.7));
+      return c;
     },
   };
 }
