@@ -2,7 +2,7 @@
 
 Read this before changing anything. Last updated on branch `devin/1792319361-consolidate-a` (PR #2).
 
-Latest iteration (2026-10-20): the company is **Rta Systems**. Candidate A now includes camera-anchored explanatory arrows for Perception / Belief / Risk, and four applications under one persistent **Fieldcore OS · In development** heading. Under-canopy reconnaissance comes first: a quadrotor launches from a UGV, scouts a corridor, marks it low risk, and hands the route back before the UGV advances. See the current application details in `README.md`.
+Latest iteration (2026-10-20): the company is **RTA Systems**. Candidate A now includes camera-anchored explanatory arrows for Perception / Belief / Risk, and four applications under one persistent **Fieldcore OS · In development** heading. Under-canopy reconnaissance comes first: a quadrotor launches from a UGV, scouts a corridor, marks it low risk, and hands the route back before the UGV advances. See the current application details in `README.md`.
 
 ## What this is
 A one-page marketing site for an early-stage defense-autonomy startup. Motto: **"Deterrence through autonomy."**
@@ -88,7 +88,7 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
 - The deterrence section's backdrop is very dark.
 - Mobile was checked only partly, at 390×844 earlier. The tabs and deterrence section are unchecked on mobile.
 - The no-WebGL fallback has not been re-checked; the Air tab is hidden there. Real-GPU performance is unmeasured; everything was tested with software WebGL.
-- Contact form: Web3Forms key `contactFormKey` in `src/config/site.ts` forwards to the founder’s inbox (the form shows a not-available message if it is empty). Placeholders: procedural terrain, line-art glyphs. The company name is Rta Systems.
+- Contact form: Web3Forms key `contactFormKey` in `src/config/site.ts` forwards to the founder’s inbox (the form shows a not-available message if it is empty). Placeholders: procedural terrain, line-art glyphs. The company name is RTA Systems; the browser tab shows only that.
 - Current environment has no browser connected to the computer-use tool; visual screenshots cannot be claimed from the current run. Model, geometry, build and TypeScript checks are available. The documented `~/.nvm/nvm.sh` is also absent here; use installed Node when that startup file is unavailable.
 
 ## Verification tips
