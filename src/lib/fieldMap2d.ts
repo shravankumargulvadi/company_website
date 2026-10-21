@@ -89,7 +89,7 @@ export class FieldMap2D {
       ctx.stroke();
       ctx.setLineDash([]);
     };
-    path([...r.main, ...r.planned.slice(1)], m.decided > 0.5 ? 'rgba(255,90,60,0.5)' : 'rgba(235,231,222,0.7)', 1.5, [6, 5]);
+    path([...r.main, ...r.planned.slice(1)], d.blocked && m.decided > 0.5 ? 'rgba(255,90,60,0.5)' : 'rgba(235,231,222,0.7)', 1.5, [6, 5]);
     path(r.detour, `rgba(127,224,192,${(m.detect * (0.35 + 0.65 * m.decided)).toFixed(2)})`, 2);
     const dist = m.s * r.track.length;
     const n = Math.max(1, Math.round(m.s * (r.track.pts.length - 1)) + 1);

@@ -53,6 +53,7 @@ interface Built {
   hot?: { mat: THREE.MeshStandardMaterial; light: THREE.PointLight };
   beam?: { group: THREE.Group; mat: THREE.MeshBasicMaterial; head: THREE.Object3D };
   link?: { line: THREE.Line; dot: THREE.Mesh; from: THREE.Vector3 };
+  load?: THREE.Object3D;
   eye: number;
   back: number;
 }
@@ -116,6 +117,7 @@ function machineFor(id: FieldId) {
   const glow = new THREE.MeshBasicMaterial({ color: 0xffb347 });
   const legs: THREE.Object3D[] = [];
   let head: THREE.Object3D | undefined;
+  let load: THREE.Object3D | undefined;
   const box = (w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number) => mesh(new THREE.BoxGeometry(w, h, d), m, x, y, z, group);
   const wheel = (x: number, z: number, r: number, width = 0.16) => {
     const w = mesh(new THREE.CylinderGeometry(r, r, width, 16), dark, x, r, z, group);
@@ -185,10 +187,11 @@ function machineFor(id: FieldId) {
     box(0.04, 0.08, 0.22, glow, 1.28, 1.02, -0.38);
     const ore = mesh(new THREE.ConeGeometry(0.78, 0.42, 9), new THREE.MeshStandardMaterial({ color: 0x6b5442, roughness: 1, flatShading: true }), -0.4, 1.96, 0, group);
     ore.scale.set(1.15, 1, 1);
+    load = ore;
     for (const z of [-0.62, 0.62]) wheel(0.85, z, 0.55, 0.36);
     for (const z of [-0.6, -0.98, 0.6, 0.98]) wheel(-0.8, z, 0.55, 0.36);
   }
-  return { group, legs, head };
+  return { group, legs, head, load };
 }
 
 /** Site equipment for the inspection round: pumps, tanks, pipe racks and skids. */
@@ -298,7 +301,7 @@ export class FieldScene {
     } else {
       fpv.add(new THREE.Mesh(gridGeometry(g, 1, false), ground));
     }
-    const { group: machine, legs, head } = machineFor(id);
+    const { group: machine, legs, head, load } = machineFor(id);
     fpv.add(machine);
     let light: THREE.SpotLight | undefined;
     let hot: Built['hot'];
@@ -400,12 +403,12 @@ export class FieldScene {
         m.rotation.y = i * 0.5;
       });
       const from = new THREE.Vector3(40, 10, -48);
-      const earth = new THREE.Mesh(new THREE.SphereGeometry(1.1, 20, 14), new THREE.MeshBasicMaterial({ color: 0x9fc4ff, fog: false }));
+      const earth = new THREE.Mesh(new THREE.SphereGeometry(1.8, 20, 14), new THREE.MeshBasicMaterial({ color: 0x9fc4ff, fog: false }));
       earth.position.copy(from);
       fpv.add(earth);
       const lg = new THREE.BufferGeometry().setFromPoints([from, from.clone()]);
-      const ll = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: 0x9fc4ff, dashSize: 0.8, gapSize: 0.8, transparent: true, opacity: 0.35, fog: false }));
-      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xcfe2ff, fog: false }));
+      const ll = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: 0x9fc4ff, dashSize: 0.8, gapSize: 0.8, transparent: true, opacity: 0.55, fog: false }));
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), new THREE.MeshBasicMaterial({ color: 0xe6f0ff, fog: false }));
       fpv.add(ll, dot);
       link = { line: ll, dot, from };
       eye = 3;
@@ -443,7 +446,7 @@ export class FieldScene {
     goal.position.set(gx, my(gx, gz) + 0.05, gz);
     map.add(usualMap, detourMap, trail, ring, markerWrap, goal);
 
-    return { d, r, fpv, map, mapMat, machine, legs, ring, marker: markerWrap, trail, usualMap, detourMap, detourFpv, tracks, light, hot, beam, link, eye, back };
+    return { d, r, fpv, map, mapMat, machine, legs, ring, marker: markerWrap, trail, usualMap, detourMap, detourFpv, tracks, light, hot, beam, link, load, eye, back };
   }
 
   resize() {
@@ -518,8 +521,9 @@ export class FieldScene {
       pos.setXYZ(1, to.x, to.y, to.z);
       pos.needsUpdate = true;
       B.link.line.computeLineDistances();
-      B.link.dot.position.lerpVectors(B.link.from, to, this.reduced ? 0.5 : (this.time * 0.07) % 1);
+      B.link.dot.position.lerpVectors(B.link.from, to, this.reduced ? 0.5 : (this.time * 0.16) % 1);
     }
+    if (B.load) B.load.visible = m.done < 0.5;
     const drawn = Math.max(1, Math.round((dist / r.track.length) * (r.track.pts.length - 1)) + 1);
     for (const t of B.tracks) t.geometry.setDrawRange(0, drawn);
     (B.detourFpv.material as THREE.LineBasicMaterial).opacity = m.decided * (1 - m.done) * 0.9;

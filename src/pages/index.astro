@@ -43,7 +43,7 @@ const deterSteps = [
 ];
 const fieldTabs = [
   {
-    id: 'haul', tab: 'Autonomous haulage', app: 'open-pit mine · partner haul truck', flag: 'Fallen rock · on the haul road', key: 'New hazard', view: 'Haul truck · loaded',
+    id: 'haul', tab: 'Autonomous haulage', app: 'open-pit mine · partner haul truck', flag: 'Fallen rock · on the haul road', key: 'New hazard', view: 'Haul truck view',
     status: ['Loaded · heading to the dump', 'Fallen rock on the haul road', 'Taking the outer lane', 'Load dumped · back to the shovel'],
     beats: [
       { h: 'Earth moved, around the clock.', p: 'A loaded haul truck runs the same road from the shovel to the dump, shift after shift. Fieldcore OS drives it.' },
@@ -2088,6 +2088,11 @@ const forceCaps = [
     }
     .deep__switch button[hidden] {
       display: none;
+    }
+    .deep--field .deep__switch button {
+      white-space: normal;
+      line-height: 1.35;
+      padding: 7px 8px;
     }
     .deep.is-flat .deep__switch button[data-tab='pilot'] {
       grid-column: 1 / -1;
