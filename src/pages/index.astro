@@ -41,6 +41,38 @@ const deterSteps = [
   { h: 'Defensive and offensive superiority.', p: 'Machines that see, decide and act where people cannot, on defence or in attack.' },
   { h: 'Deterrence through denial and punishment.', p: 'An adversary who cannot win, and cannot avoid the cost, does not start.' },
 ];
+const fieldTabs = [
+  {
+    id: 'mine', tab: 'Go in first', app: 'underground mine · partner vehicle', flag: 'Rockfall · new since the blast',
+    status: ['Entering the heading · dust ahead', 'Rockfall detected · holding', 'Rerouting through the crosscut', 'Heading mapped · ready for the crew'],
+    beats: [
+      { h: 'After the blast, before the crew.', p: 'Dust hangs in a fresh heading. Before anyone goes back in, a machine running Fieldcore OS goes first.' },
+      { h: 'What it can’t see clearly, it treats as risk.', p: 'Dust hides the floor ahead. Up close, it finds fresh rockfall across the usual route.' },
+      { h: 'It takes the crosscut.', p: 'It goes around the fall through the parallel drive and keeps mapping as it goes.' },
+      { h: 'The crew goes in knowing what is there.', p: 'The heading is mapped and the rockfall marked before anyone enters.' },
+    ],
+  },
+  {
+    id: 'patrol', tab: 'Notice what changed', app: 'industrial site at night · partner legged robot', flag: 'Leak · not there last round',
+    status: ['Night patrol · usual route', 'Change since last round · leak', 'Rerouting along the next aisle', 'Round complete · change reported'],
+    beats: [
+      { h: 'The same round, every night.', p: 'A legged robot walks its patrol between tanks and pipe racks. Fieldcore OS knows what the site looked like last time.' },
+      { h: 'Something is different.', p: 'Since the last round, a leak has spread across the usual walkway. It isn’t on any map.' },
+      { h: 'It finds another way round.', p: 'It keeps clear of the spill, takes the next aisle and finishes the round.' },
+      { h: 'Reported, not just avoided.', p: 'The change is marked on the site map for the morning crew.' },
+    ],
+  },
+  {
+    id: 'rover', tab: 'Decide alone', app: 'planetary surface · partner rover', flag: 'Soft ground · crater rim',
+    status: ['Driving to target · no live link', 'Soft ground on the rim', 'Longer route · firmer ground', 'Target reached · ready for the next command'],
+    beats: [
+      { h: 'Minutes from the nearest operator.', p: 'On another planet, every command from Earth arrives minutes late. No one can drive it in real time.' },
+      { h: 'The direct line runs along the rim.', p: 'The ground there is soft and the slope falls into the crater. It may not hold.' },
+      { h: 'It decides on its own.', p: 'It weighs the slope and the ground it can see, and takes the longer, firmer way round.' },
+      { h: 'It arrives, ready for the next command.', p: 'The target is reached safely, without waiting for Earth.' },
+    ],
+  },
+];
 const markets = [
   { id: 'defense', k: 'Defense', h: 'Deterrence through autonomy.', p: 'Machines that see, decide and act when links fail and an adversary is watching.', where: 'Reconnaissance · contested airspace · GPS-denied ground' },
   { id: 'industry', k: 'Industry & exploration', h: 'Where people shouldn’t have to go first.', p: 'The same autonomy on machines that inspect, patrol and explore, so people stay out of harm’s way.', where: 'Mining · industrial sites · planetary surfaces' },
@@ -291,6 +323,45 @@ const forceCaps = [
       </div>
     </section>
 
+    <section class="deep deep--field" data-sec="field" id="industry" data-tab="mine" data-info={JSON.stringify(fieldTabs.map(({ id, app, flag, status }) => ({ id, app, flag, status })))} style="--h: 1820vh">
+      <div class="deep__sticky">
+        <canvas id="a-field" class="deep__gl" aria-label="The machine's view beside the risk map it builds, as it finds a hazard on its usual route and takes a safer one" role="img"></canvas>
+        <div class="deep__shade" aria-hidden="true"></div>
+        <p class="deep__tag deep__tag--r mono">Belief · risk map</p>
+        <p class="field__flag mono" data-field-flag aria-hidden="true">{fieldTabs[0].flag}</p>
+        <div class="deep__product" aria-label="Fieldcore OS is in development">
+          <h2 class="mono">Fieldcore OS · Industry <span class="deep__development">In development</span></h2>
+          <p>Same Fieldcore OS. Their machines.</p>
+        </div>
+        <div class="deep__switch mono" role="tablist" aria-label="Industry and exploration applications of Fieldcore OS">
+          <span class="deep__badge">Industry</span>
+          {fieldTabs.map((t, i) => (
+            <button type="button" role="tab" data-field-tab={t.id} aria-selected={i === 0 ? 'true' : 'false'}>{t.tab}</button>
+          ))}
+        </div>
+        <div class="deep__copy">
+          <p class="eyebrow" data-field-title>Application · {fieldTabs[0].app}</p>
+          {fieldTabs.map((t, i) => (
+            <ol class="deep__beats" data-field-beats={t.id} hidden={i !== 0}>
+              {t.beats.map((b) => (
+                <li>
+                  <h2 class="headline">{b.h}</h2>
+                  <p class="lede">{b.p}</p>
+                </li>
+              ))}
+            </ol>
+          ))}
+        </div>
+        <div class="deep__hud mono"><span data-field-status>{fieldTabs[0].status[0]}</span></div>
+        <div class="deep__legend mono" aria-hidden="true">
+          <span class="deep__ramp"></span><span>Low → high risk</span>
+          <span class="deep__unk"></span><span>Not yet observed</span>
+          <span class="field__key field__key--haz"></span><span>New hazard</span>
+          <span class="field__key field__key--unc" data-field-unc></span><span data-field-unc>Unclear · dust</span>
+        </div>
+      </div>
+    </section>
+
     <section class="sec" data-sec="close" id="contact" style="--h: 130vh">
       <div class="sticky">
         <div class="panel panel--center" data-fade>
@@ -466,11 +537,7 @@ const forceCaps = [
   const forceSec = sections.get('force')!;
   const forceWrap = document.querySelector<HTMLElement>('[data-force-wrap]')!;
   const forceCanvas = document.getElementById('a-force') as HTMLCanvasElement;
-  const markets = [
-  { id: 'defense', k: 'Defense', h: 'Deterrence through autonomy.', p: 'Machines that see, decide and act when links fail and an adversary is watching.', where: 'Reconnaissance · contested airspace · GPS-denied ground' },
-  { id: 'industry', k: 'Industry & exploration', h: 'Where people shouldn’t have to go first.', p: 'The same autonomy on machines that inspect, patrol and explore, so people stay out of harm’s way.', where: 'Mining · industrial sites · planetary surfaces' },
-];
-const forceCaps = [...forceSec.querySelectorAll<HTMLElement>('[data-fcap]')];
+  const forceCaps = [...forceSec.querySelectorAll<HTMLElement>('[data-fcap]')];
   const deepEl = sections.get('deep')!;
   function updateForceFade() {
     const live = deepEl.getBoundingClientRect().top > 0;
@@ -554,6 +621,82 @@ const forceCaps = [...forceSec.querySelectorAll<HTMLElement>('[data-fcap]')];
   }, '600px');
 
   /* Fieldcore demos: forest reconnaissance, fixed-wing, underground, pilot assistance. */
+  const fieldSec = sections.get('field')!;
+  whenNear(fieldSec, async () => {
+    type FieldTab = 'mine' | 'patrol' | 'rover';
+    const order: FieldTab[] = ['mine', 'patrol', 'rover'];
+    const info = JSON.parse(fieldSec.dataset.info!) as { id: FieldTab; app: string; flag: string; status: string[] }[];
+    const canvas = document.getElementById('a-field') as HTMLCanvasElement;
+    const lowPower = window.innerWidth < 760 || (navigator.hardwareConcurrency ?? 8) <= 4;
+    const scene = hasWebGL()
+      ? new (await import('../components/industry/fieldScene')).FieldScene(canvas, { lowPower, reducedMotion: reduced })
+      : new (await import('../lib/fieldMap2d')).FieldMap2D(canvas);
+    if (!hasWebGL()) fieldSec.classList.add('is-flat');
+    scene.resize();
+    window.addEventListener('resize', () => scene.resize());
+    canvas.classList.add('is-ready');
+    const tabs = [...fieldSec.querySelectorAll<HTMLButtonElement>('[data-field-tab]')];
+    const lists = [...fieldSec.querySelectorAll<HTMLElement>('[data-field-beats]')];
+    const flag = fieldSec.querySelector<HTMLElement>('[data-field-flag]')!;
+    const status = fieldSec.querySelector<HTMLElement>('[data-field-status]')!;
+    const title = fieldSec.querySelector<HTMLElement>('[data-field-title]')!;
+    const unc = [...fieldSec.querySelectorAll<HTMLElement>('[data-field-unc]')];
+    const fieldAt = () => clamp(sectionProgress('field') * order.length + 1e-9, 0, order.length - 1e-6);
+    let tab: FieldTab = 'mine';
+    let sp = 0;
+    const setTab = (t: FieldTab) => {
+      tab = t;
+      fieldSec.dataset.tab = t;
+      const i = order.indexOf(t);
+      tabs.forEach(b => {
+        b.setAttribute('aria-selected', String(b.dataset.fieldTab === t));
+        b.tabIndex = b.dataset.fieldTab === t ? 0 : -1;
+      });
+      lists.forEach(ol => { ol.hidden = ol.dataset.fieldBeats !== t; });
+      title.textContent = `Application · ${info[i].app}`;
+      flag.textContent = info[i].flag;
+      unc.forEach(el => { el.hidden = t !== 'mine'; });
+      scene.setDemo(t);
+      sp = clamp(fieldAt() - i);
+    };
+    tabs.forEach(b => b.addEventListener('click', () => {
+      const next = b.dataset.fieldTab as FieldTab;
+      if (next === tab) return;
+      const start = fieldSec.getBoundingClientRect().top + window.scrollY;
+      const span = Math.max(1, fieldSec.offsetHeight - window.innerHeight);
+      window.scrollTo({ top: start + span * order.indexOf(next) / order.length + 2, behavior: 'auto' });
+      setTab(next);
+    }));
+    tabs.forEach(b => b.addEventListener('keydown', event => {
+      const index = order.indexOf(b.dataset.fieldTab as FieldTab);
+      const next = event.key === 'ArrowRight' ? (index + 1) % order.length
+        : event.key === 'ArrowLeft' ? (index + order.length - 1) % order.length
+        : event.key === 'Home' ? 0 : event.key === 'End' ? order.length - 1 : -1;
+      if (next < 0) return;
+      event.preventDefault();
+      const button = tabs[next];
+      button.focus();
+      button.click();
+    }));
+    setTab(order[Math.floor(fieldAt())]);
+    visibleLoop(fieldSec, (_t, dt) => {
+      const at = fieldAt();
+      const next = order[Math.floor(at)];
+      if (next !== tab) setTab(next);
+      const p = clamp(at - order.indexOf(tab));
+      sp += (p - sp) * (reduced ? 1 : 1 - Math.exp(-dt * 5));
+      const m = scene.frame(dt, sp);
+      const beats = lists[order.indexOf(tab)].children;
+      const bi = Math.min(beats.length - 1, Math.floor(sp * beats.length));
+      [...beats].forEach((el, i) => el.classList.toggle('is-active', i === bi));
+      const st = info[order.indexOf(tab)].status;
+      status.textContent = st[m.done > 0.5 ? 3 : m.decided > 0.5 ? 2 : m.detect > 0.5 ? 1 : 0];
+      const [ax, ay] = scene.anchor();
+      flag.style.transform = `translate(${Math.min(ax, window.innerWidth - flag.offsetWidth - 24).toFixed(0)}px, ${ay.toFixed(0)}px)`;
+      flag.style.opacity = String(m.detect);
+    });
+  }, '900px');
+
   const deepSec = sections.get('deep')!;
   whenNear(deepSec, async () => {
     const [{ createPassage, passageStats }, { createLandingAssessment, landingState }, forestModel] = await Promise.all([
@@ -1463,6 +1606,9 @@ const forceCaps = [...forceSec.querySelectorAll<HTMLElement>('[data-fcap]')];
   .deep:not([data-tab='ground']) .deep__legend {
     display: none;
   }
+  .deep--field .deep__legend {
+    display: grid;
+  }
   .deep[data-tab='air'] .deep__air {
     display: block;
   }
@@ -1492,6 +1638,39 @@ const forceCaps = [...forceSec.querySelectorAll<HTMLElement>('[data-fcap]')];
   .deep__air:global(.is-chosen)::after {
     content: ' · chosen';
     color: var(--fg);
+  }
+  .field__flag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 5px 8px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ffd2c4;
+    background: rgba(5, 5, 6, 0.78);
+    border-left: 2px solid #ff3d1f;
+    pointer-events: none;
+    opacity: 0;
+    white-space: nowrap;
+    translate: 14px -50%;
+  }
+  .field__key {
+    width: 14px;
+    height: 8px;
+  }
+  .field__key--haz {
+    background: #ff3d1f;
+  }
+  .field__key--unc {
+    background: rgba(158, 115, 255, 0.75);
+  }
+  .deep__legend [hidden] {
+    display: none;
+  }
+  .deep--field.is-flat .deep__shade {
+    background: linear-gradient(0deg, rgba(5, 5, 6, 0.92) 0%, rgba(5, 5, 6, 0) 46%);
   }
   .deep__beats[hidden] {
     display: none;
