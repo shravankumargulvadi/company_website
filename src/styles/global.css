@@ -2,8 +2,8 @@
   --bg: #07080a;
   --bg-2: #0d0f12;
   --fg: #ebe7de;
-  --fg-dim: rgba(235, 231, 222, 0.64);
-  --fg-faint: rgba(235, 231, 222, 0.38);
+  --fg-dim: rgba(235, 231, 222, 0.76);
+  --fg-faint: rgba(235, 231, 222, 0.54);
   --line: rgba(235, 231, 222, 0.12);
   --accent: #ffb347;
   --signal: #a8e6ff;
@@ -80,7 +80,7 @@ p {
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
