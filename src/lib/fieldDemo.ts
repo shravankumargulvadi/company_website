@@ -6,7 +6,7 @@
 import { createNoise2D, fbm } from './noise';
 
 export type V2 = [number, number];
-export type FieldId = 'mine' | 'patrol' | 'rover';
+export type FieldId = 'haul' | 'inspect' | 'rover';
 export type RGB = [number, number, number];
 
 export interface Hazard {
@@ -32,6 +32,21 @@ export interface FieldDemo {
   hazards: Hazard[];
   /** Point on the planned route that the hazard label anchors to. */
   hazardAt: V2;
+  /** Whether the hazard blocks the usual route, or is something to look at more closely. */
+  blocked: boolean;
+  /** Equipment on site, shared by the map heights and the machine view. */
+  props?: Prop[];
+}
+
+export interface Prop {
+  kind: 'pump' | 'tank' | 'rack' | 'skid';
+  x: number;
+  z: number;
+  /** Footprint along x and z (tanks: diameter in w). */
+  w: number;
+  d: number;
+  h: number;
+  hot?: boolean;
 }
 
 const sstep = (a: number, b: number, x: number) => {
@@ -146,68 +161,84 @@ export function seenField(d: FieldDemo, track: Path2, xs: Float32Array, zs: Floa
 }
 
 const AMBER: RGB = [1, 0.55, 0.16];
-const VIOLET: RGB = [0.62, 0.45, 1];
 
-/* ---------- underground mine: a fresh heading after the blast ---------- */
-function mine(): FieldDemo {
+/* ---------- open-pit haulage: a benched haul road from the shovel to the dump ---------- */
+function haul(): FieldDemo {
   const n1 = createNoise2D(31);
   const n2 = createNoise2D(47);
-  const main: V2[] = [[30, 60], [30.5, 50], [29.5, 40], [30, 33]];
-  const planned: V2[] = [[30, 33], [29.5, 24], [30.5, 15], [30, 6]];
-  const detour: V2[] = [[30, 33], [37, 31], [41, 24], [40, 15], [35, 8], [30.5, 6]];
-  const polys = [main, planned, detour].map((c) => catmull(c));
-  const hz: V2 = [30, 27];
+  const main: V2[] = [[27, 60], [27, 50], [27, 42], [27, 36]];
+  const planned: V2[] = [[27, 36], [27, 26], [27, 16], [27, 6]];
+  const detour: V2[] = [[27, 36], [30.5, 32], [32.5, 26], [32.5, 20], [30, 14], [27, 9], [27, 6]];
+  const hz: V2 = [27, 27];
   return {
-    id: 'mine', extent: 60, main, planned, detour, mapTop: 3.8, sensor: 10, hazardAt: hz,
-    hazards: [
-      { x: hz[0], z: hz[1], r: 5.5, color: AMBER },
-      { x: 29, z: 19, r: 7, color: VIOLET, always: true },
-    ],
+    id: 'haul', extent: 60, main, planned, detour, mapTop: 8, sensor: 14, hazardAt: hz, blocked: true,
+    hazards: [{ x: hz[0], z: hz[1], r: 3.6, color: AMBER }],
     height(x, z) {
-      const dd = Math.min(...polys.map((p) => distTo(p, x, z)));
-      const wall = sstep(1.6, 2.7, dd + fbm(n2, x * 0.4, z * 0.4, 2) * 0.45);
-      const rubble = Math.max(0, fbm(n1, x * 1.4, z * 1.4, 2)) * 0.5 * Math.exp(-((x - hz[0]) ** 2 + (z - hz[1]) ** 2) / 14);
-      return 3.8 * wall + wall * fbm(n1, x * 0.3, z * 0.3, 3) * 0.7 + fbm(n1, x * 0.9, z * 0.9, 2) * 0.08 + rubble * (1 - wall);
+      const e = x + fbm(n2, z * 0.06, 0.5, 2) * 1.6;
+      let y = (z - 30) * 0.06;
+      for (let k = 0; k < 3; k++) y += 3.2 * (1 - sstep(20.2 - 8 * k, 21.8 - 8 * k, e));
+      for (let k = 0; k < 2; k++) y -= 3.2 * sstep(38.2 + 8 * k, 39.8 + 8 * k, e);
+      y += 0.55 * Math.exp(-(((e - 22.4) / 0.5) ** 2)) + 0.55 * Math.exp(-(((e - 37.6) / 0.5) ** 2));
+      const road = e > 22 && e < 38;
+      y += fbm(n1, x * 0.5, z * 0.5, 2) * (road ? 0.03 : 0.14);
+      y += Math.max(0, fbm(n1, x * 1.6, z * 1.6, 2)) * 0.6 * Math.exp(-((x - hz[0]) ** 2 + (z - hz[1]) ** 2) / 5);
+      return y;
     },
-    color(x, z, y) {
-      const g = 0.2 + 0.06 * Math.min(1, y / 3.6) + fbm(n2, x * 1.6, z * 1.6, 2) * 0.05;
-      const floor = 1 - Math.min(1, y / 1.2);
-      return [g * 1.18 + floor * 0.05, g * 1.02 + floor * 0.04, g * 0.86 + floor * 0.02];
+    color(x, z) {
+      const e = x + fbm(n2, z * 0.06, 0.5, 2) * 1.6;
+      const g = 0.34 + fbm(n2, x * 1.4, z * 1.4, 2) * 0.05;
+      if (e > 23 && e < 37) return [g * 1.22, g * 1.1, g * 0.95];
+      const band = 0.04 * Math.sin(z * 0.9 + fbm(n1, x * 0.3, z * 0.3, 2) * 3);
+      return [g * 1.28 + band, g * 1.0 + band, g * 0.74];
     },
   };
 }
 
-/* ---------- legged patrol: an industrial site at night ---------- */
-function patrol(): FieldDemo {
+/* ---------- industrial inspection: a night round past pumps, tanks and pipe racks ---------- */
+const INSPECT_PROPS: Prop[] = [
+  { kind: 'pump', x: 25.5, z: 25.5, w: 2.6, d: 1.4, h: 1.3 },
+  { kind: 'pump', x: 33.5, z: 25.5, w: 2.6, d: 1.4, h: 1.3, hot: true },
+  { kind: 'pump', x: 47, z: 23.6, w: 2.6, d: 1.4, h: 1.3 },
+  { kind: 'tank', x: 32, z: 40, w: 6, d: 6, h: 5 },
+  { kind: 'tank', x: 41, z: 37.5, w: 5, d: 5, h: 4.4 },
+  { kind: 'rack', x: 38, z: 18, w: 36, d: 1.2, h: 3.2 },
+  { kind: 'skid', x: 24, z: 46, w: 4, d: 3, h: 1.8 },
+  { kind: 'skid', x: 6, z: 40, w: 3, d: 3, h: 1.6 },
+  { kind: 'skid', x: 52, z: 32, w: 3.5, d: 2.5, h: 1.8 },
+];
+function inspect(): FieldDemo {
   const n1 = createNoise2D(53);
-  const main: V2[] = [[12, 58], [14, 48], [20, 40], [30, 36]];
-  const planned: V2[] = [[30, 36], [38, 30], [44, 22], [47, 10]];
-  const detour: V2[] = [[30, 36], [30, 26], [33, 16], [40, 9], [47, 7]];
-  const polys = [main, planned, detour].map((c) => catmull(c));
-  const hz: V2 = [40, 27];
+  const main: V2[] = [[8, 56], [11, 47], [15, 39], [21, 33]];
+  const planned: V2[] = [[21, 33], [30, 30.5], [40, 28], [52, 25]];
+  const detour: V2[] = [[21, 33], [27, 29.5], [29.5, 25.5], [32, 22.6], [35.5, 22.6], [38.5, 25], [42, 27.5], [52, 25]];
+  const walk = [main, planned].map((c) => catmull(c));
+  const hz: V2 = [33.5, 25.5];
+  const props = INSPECT_PROPS;
   return {
-    id: 'patrol', extent: 60, main, planned, detour, mapTop: 4, sensor: 15, hazardAt: hz,
-    hazards: [{ x: hz[0], z: hz[1], r: 4.5, color: AMBER }],
+    id: 'inspect', extent: 60, main, planned, detour, mapTop: 5, sensor: 12, hazardAt: hz, blocked: false, props,
+    hazards: [{ x: hz[0], z: hz[1], r: 2.4, color: AMBER }],
     height(x, z) {
-      const dd = Math.min(...polys.map((p) => distTo(p, x, z)));
-      const bx = ((x % 9) + 9) % 9;
-      const bz = ((z % 9) + 9) % 9;
-      const inBlock = bx > 1.5 && bx < 7.5 && bz > 1.5 && bz < 7.5 && dd > 2.6;
-      const tall = 2.2 + 1.8 * (0.5 + 0.5 * n1(Math.floor(x / 9) * 3.1, Math.floor(z / 9) * 3.1));
-      return (inBlock ? tall : 0) + fbm(n1, x * 0.2, z * 0.2, 2) * 0.04;
+      let y = fbm(n1, x * 0.2, z * 0.2, 2) * 0.04;
+      for (const q of props) {
+        const inside = q.kind === 'tank'
+          ? Math.hypot(x - q.x, z - q.z) < q.w / 2
+          : Math.abs(x - q.x) < q.w / 2 && Math.abs(z - q.z) < q.d / 2;
+        if (inside) y = Math.max(y, q.h);
+      }
+      return y;
     },
     color(x, z, y) {
-      const dd = Math.min(...polys.map((p) => distTo(p, x, z)));
+      const dd = Math.min(...walk.map((p) => distTo(p, x, z)));
       const g = 0.16 + fbm(n1, x * 2, z * 2, 2) * 0.03;
-      if (y > 1) return [0.3, 0.33, 0.37];
-      if (dd < 1.4) return [0.36, 0.36, 0.35];
-      if (dd < 1.6) return [0.72, 0.58, 0.16];
+      if (y > 0.5) return [0.3, 0.33, 0.37];
+      if (dd < 1.2) return [0.34, 0.34, 0.33];
+      if (dd < 1.45) return [0.72, 0.58, 0.16];
       return [g, g * 1.02, g * 1.06];
     },
   };
 }
 
-/* ---------- planetary rover: craters, minutes from Earth ---------- */
+/* ---------- planetary rover: from the lander to a target rock, minutes from Earth ---------- */
 export const ROVER_CRATERS: [number, number, number, number][] = [
   [37, 25, 8, 2.6], [11, 18, 4, 1.2], [46, 48, 6, 1.8], [12, 40, 3.5, 1], [50, 12, 4, 1.2],
 ];
@@ -219,7 +250,7 @@ function rover(): FieldDemo {
   const detour: V2[] = [[28, 36], [22, 30], [21, 20], [25, 11], [33, 6]];
   const hz: V2 = [30.2, 24.5];
   return {
-    id: 'rover', extent: 60, main, planned, detour, mapTop: 3.2, sensor: 16, hazardAt: hz,
+    id: 'rover', extent: 60, main, planned, detour, mapTop: 3.2, sensor: 16, hazardAt: hz, blocked: true,
     hazards: [{ x: hz[0], z: hz[1], r: 5, color: AMBER }],
     height(x, z) {
       let y = fbm(n1, x * 0.05, z * 0.05, 4) * 1.6 + fbm(n2, x * 0.4, z * 0.4, 2) * 0.12;
@@ -238,7 +269,7 @@ function rover(): FieldDemo {
   };
 }
 
-export const FIELD_DEMOS: Record<FieldId, () => FieldDemo> = { mine, patrol, rover };
+export const FIELD_DEMOS: Record<FieldId, () => FieldDemo> = { haul, inspect, rover };
 
 export interface FieldGrid {
   R: number;

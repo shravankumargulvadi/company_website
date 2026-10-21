@@ -21,7 +21,7 @@ export class FieldMap2D {
   constructor(private canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
     this.octx = this.off.getContext('2d')!;
-    this.setDemo('mine');
+    this.setDemo('haul');
   }
 
   setDemo(id: FieldId) {

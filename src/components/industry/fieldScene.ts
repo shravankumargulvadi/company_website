@@ -5,8 +5,8 @@
  */
 import * as THREE from 'three';
 import {
-  FIELD_DEMOS, fieldGrid, fieldMoment, fieldRoutes,
-  type FieldDemo, type FieldGrid, type FieldId, type FieldRoutes, type V2,
+  FIELD_DEMOS, distTo, fieldGrid, fieldMoment, fieldRoutes,
+  type FieldDemo, type FieldGrid, type FieldId, type FieldRoutes, type Prop, type V2,
 } from '../../lib/fieldDemo';
 
 const RAMP: [number, number, number][] = [[58, 72, 82], [168, 98, 36], [255, 124, 52]];
@@ -48,9 +48,13 @@ interface Built {
   usualMap: THREE.Line;
   detourMap: THREE.Line;
   detourFpv: THREE.Line;
-  dust?: THREE.Points;
+  tracks: THREE.Line[];
   light?: THREE.SpotLight;
+  hot?: { mat: THREE.MeshStandardMaterial; light: THREE.PointLight };
+  beam?: { group: THREE.Group; mat: THREE.MeshBasicMaterial; head: THREE.Object3D };
+  link?: { line: THREE.Line; dot: THREE.Mesh; from: THREE.Vector3 };
   eye: number;
+  back: number;
 }
 
 const line = (pts: V2[], y: (x: number, z: number) => number, mat: THREE.Material) => {
@@ -59,6 +63,16 @@ const line = (pts: V2[], y: (x: number, z: number) => number, mat: THREE.Materia
   if (mat instanceof THREE.LineDashedMaterial) l.computeLineDistances();
   return l;
 };
+
+/** The polyline shifted sideways by `off` (wheel tracks, walkway edges). */
+const offset = (pts: V2[], off: number): V2[] => pts.map(([x, z], i) => {
+  const [ax, az] = pts[Math.max(0, i - 1)];
+  const [bx, bz] = pts[Math.min(pts.length - 1, i + 1)];
+  const l = Math.hypot(bx - ax, bz - az) || 1;
+  return [x - ((bz - az) / l) * off, z + ((bx - ax) / l) * off];
+});
+
+const rng = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
 function gridGeometry(g: FieldGrid, yScale: number, withRisk: boolean) {
   const { R } = g;
@@ -87,6 +101,13 @@ function gridGeometry(g: FieldGrid, yScale: number, withRisk: boolean) {
   return geo;
 }
 
+const mesh = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D) => {
+  const o = new THREE.Mesh(geo, m);
+  o.position.set(x, y, z);
+  parent.add(o);
+  return o;
+};
+
 /** Generic partner platforms, built facing +x. */
 function machineFor(id: FieldId) {
   const group = new THREE.Group();
@@ -94,19 +115,13 @@ function machineFor(id: FieldId) {
   const dark = new THREE.MeshStandardMaterial({ color: 0x1d1f22, roughness: 0.8 });
   const glow = new THREE.MeshBasicMaterial({ color: 0xffb347 });
   const legs: THREE.Object3D[] = [];
-  const box = (w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number) => {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-    b.position.set(x, y, z);
-    group.add(b);
-    return b;
-  };
-  const wheel = (x: number, z: number, r: number) => {
-    const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.16, 14), dark);
+  let head: THREE.Object3D | undefined;
+  const box = (w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number) => mesh(new THREE.BoxGeometry(w, h, d), m, x, y, z, group);
+  const wheel = (x: number, z: number, r: number, width = 0.16) => {
+    const w = mesh(new THREE.CylinderGeometry(r, r, width, 16), dark, x, r, z, group);
     w.rotation.x = Math.PI / 2;
-    w.position.set(x, r, z);
-    group.add(w);
   };
-  if (id === 'patrol') {
+  if (id === 'inspect') {
     box(0.95, 0.24, 0.36, body, 0, 0.62, 0);
     box(0.2, 0.14, 0.24, dark, 0.52, 0.66, 0);
     box(0.04, 0.04, 0.2, glow, 0.63, 0.68, 0);
@@ -121,19 +136,111 @@ function machineFor(id: FieldId) {
       group.add(hip);
       legs.push(hip);
     }
+    /* sensor mast: pan-tilt head with visual and thermal cameras, lidar on top, gas sniffer */
+    box(0.05, 0.34, 0.05, dark, 0.22, 0.91, 0);
+    head = new THREE.Group();
+    head.position.set(0.24, 1.1, 0);
+    group.add(head);
+    mesh(new THREE.BoxGeometry(0.16, 0.11, 0.26), body, 0, 0, 0, head);
+    const lens = new THREE.MeshStandardMaterial({ color: 0x0c1a24, roughness: 0.15, metalness: 0.8 });
+    for (const z of [-0.065, 0.065]) {
+      const l = mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.04, 12), lens, 0.09, 0, z, head);
+      l.rotation.z = Math.PI / 2;
+    }
+    mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.07, 18), dark, 0, 0.09, 0, head);
+    mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.012, 18), glow, 0, 0.1, 0, head);
+    box(0.012, 0.22, 0.012, body, -0.36, 0.84, 0.1);
+    box(0.03, 0.03, 0.03, glow, -0.36, 0.96, 0.1);
   } else if (id === 'rover') {
-    box(1.1, 0.22, 0.78, body, 0, 0.62, 0);
-    box(0.06, 0.7, 0.06, body, 0.32, 1.05, 0.2);
-    box(0.16, 0.14, 0.32, dark, 0.36, 1.45, 0.2);
-    box(0.5, 0.02, 0.4, new THREE.MeshStandardMaterial({ color: 0x202838, roughness: 0.3, metalness: 0.6 }), -0.25, 0.75, 0);
-    for (const x of [-0.42, 0, 0.42]) for (const z of [-0.44, 0.44]) wheel(x, z, 0.18);
+    /* rocker-bogie science rover: deck, mast camera, high-gain dish, power unit at the back */
+    box(1.05, 0.24, 0.72, body, 0, 0.78, 0);
+    box(0.9, 0.03, 0.66, new THREE.MeshStandardMaterial({ color: 0x202838, roughness: 0.3, metalness: 0.6 }), -0.05, 0.915, 0);
+    for (const z of [-0.5, 0.5]) {
+      box(1.0, 0.05, 0.05, dark, 0, 0.5, z);
+      box(0.05, 0.3, 0.05, dark, 0.15, 0.64, z);
+      for (const x of [-0.48, 0, 0.48]) {
+        wheel(x, z, 0.17, 0.14);
+        box(0.04, 0.32, 0.04, dark, x, 0.34, z);
+      }
+    }
+    box(0.06, 0.8, 0.06, body, 0.38, 1.3, 0.22);
+    box(0.18, 0.16, 0.36, body, 0.4, 1.74, 0.22);
+    box(0.02, 0.06, 0.24, new THREE.MeshStandardMaterial({ color: 0x0c1a24, roughness: 0.15, metalness: 0.8 }), 0.5, 1.75, 0.22);
+    const dish = mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.03, 20), body, -0.18, 1.12, -0.22, group);
+    dish.rotation.z = 0.7;
+    box(0.04, 0.2, 0.04, dark, -0.18, 1.0, -0.22);
+    const rtg = mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.5, 12), dark, -0.62, 0.95, 0, group);
+    rtg.rotation.z = -0.9;
   } else {
-    box(1.25, 0.46, 0.78, body, 0, 0.5, 0);
-    box(0.06, 0.08, 0.5, glow, 0.64, 0.62, 0);
-    box(0.2, 0.2, 0.2, dark, 0.3, 0.83, 0);
-    for (const x of [-0.42, 0.42]) for (const z of [-0.44, 0.44]) wheel(x, z, 0.24);
+    /* ultra-class haul truck: dump body with canopy over the cab, dual rear wheels, a load of ore */
+    const yellow = new THREE.MeshStandardMaterial({ color: 0xd8a326, roughness: 0.6, metalness: 0.2 });
+    box(2.5, 0.32, 1.1, dark, 0, 0.78, 0);
+    const bed = box(1.85, 0.72, 1.7, yellow, -0.32, 1.42, 0);
+    bed.rotation.z = 0.04;
+    box(0.9, 0.08, 1.7, yellow, 0.95, 1.86, 0);
+    box(0.48, 0.5, 0.5, yellow, 1.02, 1.3, 0.48);
+    box(0.02, 0.24, 0.4, new THREE.MeshStandardMaterial({ color: 0x0c1a24, roughness: 0.15, metalness: 0.8 }), 1.27, 1.4, 0.48);
+    box(0.3, 0.42, 1.0, dark, 1.12, 1.0, 0);
+    box(0.04, 0.08, 0.22, glow, 1.28, 1.02, 0.38);
+    box(0.04, 0.08, 0.22, glow, 1.28, 1.02, -0.38);
+    const ore = mesh(new THREE.ConeGeometry(0.78, 0.42, 9), new THREE.MeshStandardMaterial({ color: 0x6b5442, roughness: 1, flatShading: true }), -0.4, 1.96, 0, group);
+    ore.scale.set(1.15, 1, 1);
+    for (const z of [-0.62, 0.62]) wheel(0.85, z, 0.55, 0.36);
+    for (const z of [-0.6, -0.98, 0.6, 0.98]) wheel(-0.8, z, 0.55, 0.36);
   }
-  return { group, legs };
+  return { group, legs, head };
+}
+
+/** Site equipment for the inspection round: pumps, tanks, pipe racks and skids. */
+function equipment(props: Prop[], fpv: THREE.Scene) {
+  const steel = new THREE.MeshStandardMaterial({ color: 0x5d636b, roughness: 0.5, metalness: 0.6 });
+  const paint = new THREE.MeshStandardMaterial({ color: 0x3e6a7a, roughness: 0.6, metalness: 0.3 });
+  const tankMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.45, metalness: 0.4 });
+  const valve = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.5 });
+  const dial = new THREE.MeshBasicMaterial({ color: 0xe8e4da });
+  let hot: Built['hot'];
+  for (const q of props) {
+    if (q.kind === 'pump') {
+      const motorMat = q.hot ? new THREE.MeshStandardMaterial({ color: 0x3e6a7a, roughness: 0.6, metalness: 0.3, emissive: 0xff3d1f, emissiveIntensity: 0 }) : paint;
+      mesh(new THREE.BoxGeometry(q.w, 0.16, q.d), steel, q.x, 0.08, q.z, fpv);
+      const motor = mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.1, 18), motorMat, q.x - 0.45, 0.62, q.z, fpv);
+      motor.rotation.z = Math.PI / 2;
+      const casing = mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.5, 18), steel, q.x + 0.55, 0.66, q.z, fpv);
+      casing.rotation.x = Math.PI / 2;
+      mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.2, 10), steel, q.x + 0.55, 1.3, q.z, fpv);
+      const wheel = mesh(new THREE.TorusGeometry(0.18, 0.03, 6, 16), valve, q.x + 0.55, 1.5, q.z, fpv);
+      wheel.rotation.x = Math.PI / 2;
+      mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.1, 6), steel, q.x - 1.1, 0.55, q.z + q.d / 2 + 0.2, fpv);
+      const g = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 16), dial, q.x - 1.1, 1.12, q.z + q.d / 2 + 0.2, fpv);
+      g.rotation.x = Math.PI / 2;
+      if (q.hot) {
+        const light = new THREE.PointLight(0xff4a1f, 0, 7, 1.4);
+        light.position.set(q.x - 0.45, 1.3, q.z);
+        fpv.add(light);
+        hot = { mat: motorMat as THREE.MeshStandardMaterial, light };
+      }
+    } else if (q.kind === 'tank') {
+      mesh(new THREE.CylinderGeometry(q.w / 2, q.w / 2, q.h, 28), tankMat, q.x, q.h / 2, q.z, fpv);
+      const dome = mesh(new THREE.SphereGeometry(q.w / 2, 28, 8, 0, Math.PI * 2, 0, Math.PI / 6), tankMat, q.x, q.h - (q.w / 2) * Math.cos(Math.PI / 6), q.z, fpv);
+      dome.castShadow = false;
+      mesh(new THREE.BoxGeometry(0.06, q.h, 0.5), steel, q.x + q.w / 2 + 0.05, q.h / 2, q.z, fpv);
+    } else if (q.kind === 'rack') {
+      for (let x = q.x - q.w / 2; x <= q.x + q.w / 2; x += 4) {
+        mesh(new THREE.BoxGeometry(0.14, q.h, 0.14), steel, x, q.h / 2, q.z - 0.5, fpv);
+        mesh(new THREE.BoxGeometry(0.14, q.h, 0.14), steel, x, q.h / 2, q.z + 0.5, fpv);
+        mesh(new THREE.BoxGeometry(0.14, 0.14, 1.14), steel, x, q.h, q.z, fpv);
+      }
+      for (const [dz, r, m] of [[-0.3, 0.16, paint], [0, 0.2, steel], [0.3, 0.12, valve]] as [number, number, THREE.Material][]) {
+        const pipe = mesh(new THREE.CylinderGeometry(r, r, q.w, 12), m, q.x, q.h + 0.2, q.z + dz, fpv);
+        pipe.rotation.z = Math.PI / 2;
+      }
+    } else {
+      mesh(new THREE.BoxGeometry(q.w, q.h, q.d), paint, q.x, q.h / 2, q.z, fpv);
+      const wheel = mesh(new THREE.TorusGeometry(0.22, 0.04, 6, 16), valve, q.x, q.h + 0.25, q.z, fpv);
+      wheel.rotation.x = Math.PI / 2;
+    }
+  }
+  return hot;
 }
 
 export class FieldScene {
@@ -158,7 +265,7 @@ export class FieldScene {
     this.renderer.setClearColor(0x050506, 1);
     this.reduced = !!opts.reducedMotion;
     this.R = opts.lowPower ? 96 : 140;
-    this.setDemo('mine');
+    this.setDemo('haul');
   }
 
   setDemo(id: FieldId) {
@@ -178,87 +285,140 @@ export class FieldScene {
     const g = fieldGrid(d, r, this.R);
     const fpv = new THREE.Scene();
     const map = new THREE.Scene();
+    const rand = rng(id.length * 7919);
+    const gy = (x: number, z: number) => d.height(x, z);
 
     /* machine view */
-    const ground = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: id !== 'rover' });
-    fpv.add(new THREE.Mesh(gridGeometry(g, 1, false), ground));
-    const { group: machine, legs } = machineFor(id);
+    const ground = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: id === 'haul' });
+    if (id === 'inspect') {
+      const slab = new THREE.Mesh(new THREE.PlaneGeometry(d.extent + 40, d.extent + 40), new THREE.MeshStandardMaterial({ color: 0x24262a, roughness: 0.9 }));
+      slab.rotation.x = -Math.PI / 2;
+      slab.position.set(d.extent / 2, 0, d.extent / 2);
+      fpv.add(slab);
+    } else {
+      fpv.add(new THREE.Mesh(gridGeometry(g, 1, false), ground));
+    }
+    const { group: machine, legs, head } = machineFor(id);
     fpv.add(machine);
     let light: THREE.SpotLight | undefined;
-    let dust: THREE.Points | undefined;
-    let eye = 2;
-    if (id === 'mine') {
-      fpv.background = new THREE.Color(0x050506);
-      fpv.fog = new THREE.FogExp2(0x050506, 0.075);
-      fpv.add(new THREE.AmbientLight(0xffffff, 0.05));
-      const roof = new THREE.Mesh(new THREE.PlaneGeometry(d.extent, d.extent), new THREE.MeshStandardMaterial({ color: 0x2c2a27, roughness: 1, side: THREE.DoubleSide }));
-      roof.rotation.x = Math.PI / 2;
-      roof.position.set(d.extent / 2, 4.1, d.extent / 2);
-      fpv.add(roof);
-      light = new THREE.SpotLight(0xfff1dc, 60, 26, 0.62, 0.45, 1.6);
-      fpv.add(light, light.target);
-      const rock = new THREE.MeshStandardMaterial({ color: 0x5c5650, roughness: 1, flatShading: true });
-      for (let i = 0; i < 16; i++) {
-        const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25 + ((i * 37) % 10) / 22, 0), rock);
-        const a = i * 2.4;
-        const rr = 0.4 + ((i * 53) % 10) / 7;
-        const x = d.hazardAt[0] + Math.cos(a) * rr;
-        const z = d.hazardAt[1] + Math.sin(a) * rr * 0.7;
-        m.position.set(x, d.height(x, z) + 0.15, z);
-        m.rotation.set(a, a * 1.3, 0);
+    let hot: Built['hot'];
+    let beam: Built['beam'];
+    let link: Built['link'];
+    let eye = 2.4;
+    let back = 4.6;
+    const rock = new THREE.MeshStandardMaterial({ color: 0x5c5650, roughness: 1, flatShading: true });
+    const rocks = (cx: number, cz: number, n: number, spread: number, size: number, keepOff = 0) => {
+      for (let i = 0; i < n; i++) {
+        const a = rand() * Math.PI * 2;
+        const rr = Math.sqrt(rand()) * spread;
+        const x = cx + Math.cos(a) * rr;
+        const z = cz + Math.sin(a) * rr;
+        if (keepOff && (distTo(r.track.pts, x, z) < keepOff || distTo(r.planned, x, z) < keepOff)) continue;
+        const m = new THREE.Mesh(new THREE.DodecahedronGeometry(size * (0.4 + rand()), 0), rock);
+        m.position.set(x, gy(x, z) + size * 0.2, z);
+        m.rotation.set(rand() * 6, rand() * 6, 0);
+        m.scale.y = 0.6 + rand() * 0.4;
         fpv.add(m);
       }
-      const N = 900;
-      const pts = new Float32Array(N * 3);
-      const dz = d.hazards.find((h) => h.always)!;
-      for (let i = 0; i < N; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const rr = Math.sqrt(Math.random()) * dz.r * 1.3;
-        pts.set([dz.x + Math.cos(a) * rr * 0.5, 0.2 + Math.random() * 3.6, dz.z + Math.sin(a) * rr], i * 3);
+    };
+    if (id === 'haul') {
+      fpv.background = new THREE.Color(0x1c1713);
+      fpv.fog = new THREE.FogExp2(0x1c1713, 0.024);
+      fpv.add(new THREE.HemisphereLight(0xe3cfb4, 0x2a2018, 0.9));
+      const sun = new THREE.DirectionalLight(0xffe6c4, 2.2);
+      sun.position.set(-40, 50, 20);
+      fpv.add(sun);
+      rock.color.set(0x6a5a4a);
+      rocks(d.hazardAt[0], d.hazardAt[1], 22, 2.4, 0.42);
+      const dump = new THREE.Mesh(new THREE.ConeGeometry(6, 3.4, 12), new THREE.MeshStandardMaterial({ color: 0x5a4636, roughness: 1, flatShading: true }));
+      dump.position.set(23, gy(23, 1) + 1.4, 1);
+      fpv.add(dump);
+      const post = new THREE.MeshStandardMaterial({ color: 0xff7a1a, emissive: 0x401400 });
+      for (let z = 4; z < 60; z += 7) {
+        for (const x of [22.6, 37.4]) mesh(new THREE.BoxGeometry(0.12, 0.9, 0.12), post, x, gy(x, z) + 0.45, z, fpv);
       }
-      const dg = new THREE.BufferGeometry();
-      dg.setAttribute('position', new THREE.BufferAttribute(pts, 3));
-      dust = new THREE.Points(dg, new THREE.PointsMaterial({ color: 0xc8bba6, size: 0.07, transparent: true, opacity: 0.55, depthWrite: false }));
-      fpv.add(dust);
-    } else if (id === 'patrol') {
+      eye = 6.2;
+      back = 11;
+    } else if (id === 'inspect') {
       fpv.background = new THREE.Color(0x07090d);
-      fpv.fog = new THREE.FogExp2(0x07090d, 0.045);
-      fpv.add(new THREE.HemisphereLight(0x5a6c88, 0x0b0c10, 0.55));
+      fpv.fog = new THREE.FogExp2(0x07090d, 0.04);
+      fpv.add(new THREE.HemisphereLight(0x6a7c98, 0x14161c, 1.1));
+      const key = new THREE.PointLight(0xc8d8ff, 5, 7, 1.2);
+      key.position.set(-1.4, 2.4, 1.4);
+      machine.add(key);
+      eye = 2.1;
+      back = 3.6;
       const bulb = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
-      for (const [x, z] of [[14, 50], [24, 39], [35, 32], [31, 22], [39, 10]] as V2[]) {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4, 6), new THREE.MeshStandardMaterial({ color: 0x3a3d42 }));
-        post.position.set(x + 2.2, 2, z);
-        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), bulb);
-        lamp.position.set(x + 2.2, 4, z);
+      for (const [x, z] of [[13, 50], [18, 38], [28, 34], [37, 31.5], [46, 29.5]] as V2[]) {
+        mesh(new THREE.CylinderGeometry(0.06, 0.06, 4, 6), new THREE.MeshStandardMaterial({ color: 0x3a3d42 }), x, 2, z + 1.6, fpv);
+        mesh(new THREE.SphereGeometry(0.16, 10, 8), bulb, x, 4, z + 1.6, fpv);
         const pl = new THREE.PointLight(0xffc98a, 14, 14, 1.6);
-        pl.position.set(x + 2.2, 3.8, z);
-        fpv.add(post, lamp, pl);
+        pl.position.set(x, 3.8, z + 1.6);
+        fpv.add(pl);
       }
-      const [hx, hz] = d.hazardAt;
-      const spill = new THREE.Mesh(new THREE.CircleGeometry(3.2, 40), new THREE.MeshStandardMaterial({ color: 0x1a1206, emissive: 0x6a2a06, emissiveIntensity: 0.55, roughness: 0.08, metalness: 0.7 }));
-      spill.rotation.x = -Math.PI / 2;
-      spill.scale.set(1, 0.7, 1);
-      spill.position.set(hx, 0.06, hz);
-      fpv.add(spill);
-      const cone = new THREE.MeshStandardMaterial({ color: 0xff7a1a, emissive: 0x401400 });
-      for (const [ox, oz] of [[-2.6, 1.6], [-1.2, 2.8], [2.4, -1.4]]) {
-        const c = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 10), cone);
-        c.position.set(hx + ox, 0.25, hz + oz);
-        fpv.add(c);
+      hot = equipment(d.props ?? [], fpv);
+      const edge = new THREE.LineBasicMaterial({ color: 0xb8932a });
+      const usual = [...r.main, ...r.planned.slice(1)];
+      for (const o of [-1.3, 1.3]) fpv.add(line(offset(usual, o), () => 0.02, edge));
+      if (head) {
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff6a3c, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+        const geo = new THREE.ConeGeometry(0.9, 1, 24, 1, true);
+        geo.rotateX(-Math.PI / 2);
+        geo.translate(0, 0, 0.5);
+        const group = new THREE.Group();
+        group.add(new THREE.Mesh(geo, mat));
+        fpv.add(group);
+        beam = { group, mat, head };
       }
-      eye = 2.4;
     } else {
-      fpv.background = new THREE.Color(0x0b0807);
-      fpv.fog = new THREE.FogExp2(0x1a110c, 0.016);
-      fpv.add(new THREE.HemisphereLight(0xd8a27a, 0x2a1a12, 0.65));
+      fpv.background = new THREE.Color(0x24150d);
+      fpv.fog = new THREE.FogExp2(0x24150d, 0.02);
+      fpv.add(new THREE.HemisphereLight(0xd8a27a, 0x2a1a12, 0.7));
       const sun = new THREE.DirectionalLight(0xfff0e0, 2.2);
       sun.position.set(-30, 40, 10);
       fpv.add(sun);
-      eye = 2.4;
+      rock.color.set(0x6e4a36);
+      rocks(d.extent / 2, d.extent / 2, 260, 34, 0.32, 1.6);
+      /* the lander it drove off, and the rock it was sent to study */
+      const [lx, lz] = [19.5, 50];
+      const ly = gy(lx, lz);
+      const metal = new THREE.MeshStandardMaterial({ color: 0xa8a29a, roughness: 0.5, metalness: 0.5 });
+      const cell = new THREE.MeshStandardMaterial({ color: 0x1b2440, roughness: 0.3, metalness: 0.7 });
+      mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.8, 6), metal, lx, ly + 1.3, lz, fpv);
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2 + Math.PI / 4;
+        const leg = mesh(new THREE.BoxGeometry(0.08, 1.3, 0.08), metal, lx + Math.cos(a) * 1.4, ly + 0.6, lz + Math.sin(a) * 1.4, fpv);
+        leg.rotation.set(Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4);
+      }
+      for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(2.6, 0.04, 1.3), cell, lx + s * 2.6, ly + 1.4, lz, fpv);
+      const ramp = mesh(new THREE.BoxGeometry(0.9, 0.04, 2.2), metal, lx + 1.6, ly + 0.55, lz - 1.6, fpv);
+      ramp.rotation.set(0.4, 0.6, 0);
+      const [ox, oz] = [38, 1.8];
+      const strata = [0x8a5a3c, 0xb07a50, 0x7a4a30, 0xa06a44, 0x8a5a3c];
+      strata.forEach((c, i) => {
+        const m = mesh(new THREE.CylinderGeometry(1.5 - i * 0.24, 1.65 - i * 0.24, 0.42, 7), new THREE.MeshStandardMaterial({ color: c, roughness: 1, flatShading: true }), ox, gy(ox, oz) + 0.21 + i * 0.4, oz, fpv);
+        m.rotation.y = i * 0.5;
+      });
+      const from = new THREE.Vector3(40, 10, -48);
+      const earth = new THREE.Mesh(new THREE.SphereGeometry(1.1, 20, 14), new THREE.MeshBasicMaterial({ color: 0x9fc4ff, fog: false }));
+      earth.position.copy(from);
+      fpv.add(earth);
+      const lg = new THREE.BufferGeometry().setFromPoints([from, from.clone()]);
+      const ll = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: 0x9fc4ff, dashSize: 0.8, gapSize: 0.8, transparent: true, opacity: 0.35, fog: false }));
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xcfe2ff, fog: false }));
+      fpv.add(ll, dot);
+      link = { line: ll, dot, from };
+      eye = 3;
+      back = 5.6;
     }
-    const detourFpv = line(r.detour, (x, z) => d.height(x, z) + 0.06,
+    const detourFpv = line(r.detour, (x, z) => (id === 'inspect' ? 0 : gy(x, z)) + 0.06,
       new THREE.LineBasicMaterial({ color: 0x7fe0c0, transparent: true, opacity: 0 }));
     fpv.add(detourFpv);
+    const tracks = id === 'rover' ? [-0.5, 0.5].map((o) => {
+      const t = line(offset(r.track.pts, o), (x, z) => gy(x, z) + 0.04, new THREE.LineBasicMaterial({ color: 0x2a170e }));
+      fpv.add(t);
+      return t;
+    }) : [];
 
     /* risk map */
     const c = (i: number) => new THREE.Vector3(...RAMP[i].map((v) => v / 255));
@@ -277,9 +437,13 @@ export class FieldScene {
     marker.rotation.z = -Math.PI / 2;
     const markerWrap = new THREE.Mesh();
     markerWrap.add(marker);
-    map.add(usualMap, detourMap, trail, ring, markerWrap);
+    const [gx, gz] = r.track.pts[r.track.pts.length - 1];
+    const goal = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.5, 32), new THREE.MeshBasicMaterial({ color: 0xebe7de, transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
+    goal.rotation.x = -Math.PI / 2;
+    goal.position.set(gx, my(gx, gz) + 0.05, gz);
+    map.add(usualMap, detourMap, trail, ring, markerWrap, goal);
 
-    return { d, r, fpv, map, mapMat, machine, legs, ring, marker: markerWrap, trail, usualMap, detourMap, detourFpv, dust, light, eye };
+    return { d, r, fpv, map, mapMat, machine, legs, ring, marker: markerWrap, trail, usualMap, detourMap, detourFpv, tracks, light, hot, beam, link, eye, back };
   }
 
   resize() {
@@ -314,7 +478,7 @@ export class FieldScene {
     const target = r.track.heading(Math.max(0.6, dist));
     const dh = Math.atan2(Math.sin(target - this.heading), Math.cos(target - this.heading));
     this.heading += this.reduced ? dh : dh * Math.min(1, dt * 4);
-    const y = d.height(x, z);
+    const y = d.props ? 0 : d.height(x, z);
     B.machine.position.set(x, y, z);
     B.machine.rotation.y = -this.heading;
     const moved = Math.abs(dist - this.lastS);
@@ -328,23 +492,46 @@ export class FieldScene {
     const look = 0.55 * m.detect * (1 - m.decided);
     const ax = x + fx * 5 + (hx - x - fx * 5) * look;
     const az = z + fz * 5 + (hz - z - fz * 5) * look;
-    this.fpvCam.position.set(x - fx * 4.6, y + B.eye, z - fz * 4.6);
+    this.fpvCam.position.set(x - fx * B.back, y + B.eye, z - fz * B.back);
     this.fpvCam.lookAt(ax, d.height(ax, az) * 0.3 + y * 0.7 + 0.4, az);
     if (B.light) {
       B.light.position.set(x + fx * 0.6, y + 0.8, z + fz * 0.6);
       B.light.target.position.set(x + fx * 8, y + 0.2, z + fz * 8);
     }
-    if (B.dust && !this.reduced) B.dust.rotation.y = Math.sin(this.time * 0.1) * 0.01;
+    const pulse = this.reduced ? 1 : 0.75 + 0.25 * Math.sin(this.time * 3);
+    if (B.hot) {
+      B.hot.mat.emissiveIntensity = m.detect * 0.9 * pulse;
+      B.hot.light.intensity = m.detect * 10 * pulse;
+    }
+    if (B.beam) {
+      const from = B.beam.head.getWorldPosition(new THREE.Vector3());
+      const to = new THREE.Vector3(hx, 0.7, hz);
+      B.beam.group.position.copy(from);
+      B.beam.group.lookAt(to);
+      B.beam.group.scale.set(1, 1, from.distanceTo(to));
+      B.beam.mat.opacity = m.detect * (1 - m.done) * 0.16 * pulse;
+    }
+    if (B.link) {
+      /* a command from Earth, crawling towards the rover */
+      const to = new THREE.Vector3(x, y + 1.7, z);
+      const pos = B.link.line.geometry.getAttribute('position') as THREE.BufferAttribute;
+      pos.setXYZ(1, to.x, to.y, to.z);
+      pos.needsUpdate = true;
+      B.link.line.computeLineDistances();
+      B.link.dot.position.lerpVectors(B.link.from, to, this.reduced ? 0.5 : (this.time * 0.07) % 1);
+    }
+    const drawn = Math.max(1, Math.round((dist / r.track.length) * (r.track.pts.length - 1)) + 1);
+    for (const t of B.tracks) t.geometry.setDrawRange(0, drawn);
     (B.detourFpv.material as THREE.LineBasicMaterial).opacity = m.decided * (1 - m.done) * 0.9;
 
     const U = B.mapMat.uniforms;
     U.uS.value = m.s;
     U.uDetect.value = m.detect;
     U.uTime.value = this.reduced ? 0 : this.time;
-    (B.usualMap.material as THREE.LineDashedMaterial).opacity = 0.7 * (1 - 0.6 * m.decided);
-    (B.usualMap.material as THREE.LineDashedMaterial).color.set(m.decided > 0.5 ? 0xff5a3c : 0xebe7de);
+    (B.usualMap.material as THREE.LineDashedMaterial).opacity = 0.7 * (1 - (d.blocked ? 0.6 : 0.3) * m.decided);
+    (B.usualMap.material as THREE.LineDashedMaterial).color.set(d.blocked && m.decided > 0.5 ? 0xff5a3c : 0xebe7de);
     (B.detourMap.material as THREE.LineBasicMaterial).opacity = m.detect * (0.35 + 0.65 * m.decided);
-    B.trail.geometry.setDrawRange(0, Math.max(1, Math.round((dist / r.track.length) * (r.track.pts.length - 1)) + 1));
+    B.trail.geometry.setDrawRange(0, drawn);
     const my = y * MAP_Y + 0.3;
     B.ring.position.set(x, my, z);
     B.marker.position.set(x, my + 0.8, z);
