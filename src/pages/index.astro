@@ -1602,12 +1602,9 @@ const forceCaps = [
   .deep.is-flat .deep__route,
   .deep__air,
   .deep:not([data-tab='ground']) .deep__route,
-  .deep:not([data-tab='ground']) .deep__hud,
-  .deep:not([data-tab='ground']) .deep__legend {
+  .deep:not([data-tab='ground']):not(.deep--field) .deep__hud,
+  .deep:not([data-tab='ground']):not(.deep--field) .deep__legend {
     display: none;
-  }
-  .deep--field .deep__legend {
-    display: grid;
   }
   .deep[data-tab='air'] .deep__air {
     display: block;
