@@ -6,11 +6,11 @@ import ContactDialog from '../components/shared/ContactDialog.astro';
 import { site } from '../config/site';
 
 const stages = [
-  { k: 'Reality', h: 'The world as it is.', p: 'Uneven, partially hidden, and contested.' },
-  { k: 'Perception', h: 'What the sensors return.', p: 'Sparse, noisy, limited by range and line of sight.' },
-  { k: 'Belief', h: 'What the machine believes.', p: 'A model of the world — including where knowledge runs out.' },
-  { k: 'Risk', h: 'What could go wrong.', p: 'Terrain, ambiguous sensing, electronic warfare and the unknown, weighed together.' },
-  { k: 'Decision', h: 'What it chooses to do.', p: 'Many possible paths. One taken, with the consequences understood.' },
+  { k: 'Reality', h: 'The real world isn’t tidy.', p: 'Broken ground, hidden drops, no map, and an adversary working against you.' },
+  { k: 'Perception', h: 'It senses the world in many ways at once.', p: 'Each sensor sees part of the picture, limited by range, light and line of sight.' },
+  { k: 'Belief', h: 'It builds its picture of the world.', p: 'What it has seen, how sure it is, and where its knowledge runs out.' },
+  { k: 'Risk', h: 'It weighs what could go wrong.', p: 'Terrain, ambiguous sensing, electronic warfare and the unknown, weighed together.' },
+  { k: 'Decision', h: 'Then it chooses how to move.', p: 'Many possible paths. One taken, with the consequences understood.' },
 ];
 const beats = [
   { h: 'No GPS. No light. No map.', p: 'Underground, under canopy, inside structures: where remote control fails first.' },
@@ -104,13 +104,14 @@ const forceCaps = [
     <section class="sec" data-sec="reason" style="--h: 620vh">
       <div class="sticky">
         <div class="reason" data-fade>
-          <h2 class="headline reason__title">It doesn't just map the world.<br /><em>It reasons about what it doesn't know.</em></h2>
+          <h2 class="headline reason__title">
+            {stages.map((s, i) => <span class="reason__line" data-stage-title={i} aria-hidden={i === 0 ? undefined : 'true'}>{s.h}</span>)}
+          </h2>
           <ol class="rail" data-rail>
             <span class="rail__bar"><span class="rail__fill" data-rail-fill></span></span>
             {stages.map((s, i) => (
               <li data-stage={i}>
                 <span class="rail__k mono">{String(i + 1).padStart(2, '0')} {s.k}</span>
-                <span class="rail__h">{s.h}</span>
                 <span class="rail__p">{s.p}</span>
                 {s.k === 'Risk' && (
                   <span class="rail__p rail__legend mono">
@@ -380,6 +381,7 @@ const forceCaps = [
   const rail = document.querySelector<HTMLElement>('[data-rail]')!;
   const railItems = [...rail.querySelectorAll<HTMLElement>('[data-stage]')];
   const railFill = document.querySelector<HTMLElement>('[data-rail-fill]')!;
+  const stageTitles = [...document.querySelectorAll<HTMLElement>('[data-stage-title]')];
   const coverers = [sections.get('deep')!];
   let forceOpacity = 0;
   const STAGE_AT = [0, 0.2, 0.4, 0.6, 0.8];
@@ -411,6 +413,11 @@ const forceCaps = [
     reasonStage = active;
     railItems.forEach((li, i) => li.classList.toggle('is-active', i === active));
     railItems.forEach((li, i) => li.classList.toggle('is-past', i < active));
+    stageTitles.forEach((el, i) => {
+      el.classList.toggle('is-active', i === active);
+      if (i === active) el.removeAttribute('aria-hidden');
+      else el.setAttribute('aria-hidden', 'true');
+    });
     railFill.style.transform = `scaleY(${p})`;
   }
 
@@ -1030,8 +1037,20 @@ const forceCaps = [
     padding: 16vh 0 10vh;
   }
   .reason__title {
+    display: grid;
     font-size: clamp(28px, 3.4vw, 52px);
-    max-width: 18em;
+    max-width: 16em;
+  }
+  .reason__line {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+  }
+  .reason__line.is-active,
+  .reason__title:not(:has(.is-active)) .reason__line:first-child {
+    opacity: 1;
+    transform: none;
   }
   .reason__annotations {
     position: absolute;
@@ -1118,15 +1137,8 @@ const forceCaps = [
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
-  .rail__h,
   .rail__p {
     display: none;
-  }
-  .rail li.is-active .rail__h {
-    display: block;
-    font-family: var(--font-display);
-    font-size: 30px;
-    line-height: 1.1;
   }
   .rail li.is-active .rail__p {
     display: block;
@@ -1901,9 +1913,6 @@ const forceCaps = [
     }
     .force__counts {
       gap: 12px;
-    }
-    .rail li.is-active .rail__h {
-      font-size: 24px;
     }
   }
 </style>
