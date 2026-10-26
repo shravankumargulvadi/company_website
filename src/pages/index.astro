@@ -7,7 +7,7 @@ import { site } from '../config/site';
 
 const stages = [
   { k: 'Reality', h: 'The real world isn’t tidy.', p: 'Broken ground, poor visibility, no map, and an adversary working against you.' },
-  { k: 'Perception', h: 'It senses the world in many ways at once.', p: 'Each sensor sees part of the picture, limited by range, light and line of sight.' },
+  { k: 'Perception', h: 'Fieldcore OS senses the world in many ways at once.', p: 'Each sensor sees part of the picture, limited by range, light and line of sight.' },
   { k: 'Belief', h: 'It builds its picture of the world.', p: 'What it has seen, how sure it is, and where its knowledge runs out.' },
   { k: 'Risk', h: 'It weighs what could go wrong.', p: 'Terrain, ambiguous sensing, electronic warfare and the unknown, weighed together.' },
   { k: 'Decision', h: 'Then it chooses how to move.', p: 'Many possible paths. One taken, with the consequences understood.' },
@@ -42,10 +42,8 @@ const deterSteps = [
   { h: 'Deterrence through denial and punishment.', p: 'An adversary who cannot win, and cannot avoid the cost, does not start.' },
 ];
 const forceCaps = [
-  { e: '04 — Fieldcore OS', h: 'Fieldcore OS. One autonomy, many bodies.', p: 'The autonomy that runs on every machine: ground, air, legged and maritime, each with its own sense of what is risky.' },
-  { e: '05 — Autonomous teams', h: 'Machines that share what they know.', p: 'One picture of the world, built together. Tasks go to the machine best placed to carry them out.' },
-  { e: '06 — Human–machine teaming', h: 'Humans set intent. Machines carry it out.', p: 'Operators supervise many machines at once and stay in command of the decisions that matter.' },
-  { e: '07 — Shunya OS', h: 'Shunya OS. The mission intelligence layer.', p: 'Above Fieldcore: orchestrating heterogeneous swarms, AI-assisted mission planning and fleet management, re-planning as the mission unfolds.' },
+  { e: '04 — Fieldcore OS', h: 'Fieldcore OS. One autonomy, many bodies.', p: 'The autonomy that runs on every machine: ground, air, legged and maritime, each with its own sense of what is risky.', l: [] as string[] },
+  { e: '05 — Shunya OS', h: 'Shunya OS. Many machines, one mission.', p: 'The mission intelligence layer above Fieldcore OS.', l: ['Machines share one picture of the world.', 'People set the intent and stay in command.', 'Missions are planned, tasked and re-planned as they unfold.'] },
 ];
 ---
 
@@ -144,7 +142,7 @@ const forceCaps = [
       </div>
     </section>
 
-    <section class="force" data-sec="force" style="--h: 640vh">
+    <section class="force" data-sec="force" style="--h: 380vh">
       <div class="force__sticky">
         <p class="sr-only">On every machine, Fieldcore OS runs one loop: perceive, believe, assess risk, plan, act.</p>
         <div class="force__caps">
@@ -153,6 +151,7 @@ const forceCaps = [
               <p class="eyebrow">{c.e}</p>
               <h2 class="headline">{c.h}</h2>
               <p class="lede">{c.p}</p>
+              {c.l.length > 0 && <ul class="force__list">{c.l.map((t) => <li>{t}</li>)}</ul>}
             </div>
           ))}
         </div>
@@ -170,7 +169,7 @@ const forceCaps = [
     <section class="sec" data-sec="deter" style="--h: 320vh">
       <div class="sticky deter__sticky">
         <div class="deter">
-          <p class="eyebrow">08 — Why it matters</p>
+          <p class="eyebrow">06 — Why it matters</p>
           <ol class="deter__steps">
             {deterSteps.map((d, i) => (
               <li data-step={i}>
@@ -486,8 +485,6 @@ const forceCaps = [
     const stages = [
       forceStage({ z: z0, uplink: 1, move: 0, engine: 1 }),
       forceStage({ z: 0.42, follow: 0.5, uplink: 1, others: 1, fog: 0.35, threats: 0.3, engine: 0.7 }),
-      forceStage({ z: 0.72, cx: 0.62, cy: 0.4, follow: 0, uplink: 1, others: 1, team: 1, fog: 0.55, threats: 0.4, risk: 0.15, engine: 0.35 }),
-      forceStage({ z: 0.86, cx: 0.58, cy: 0.44, follow: 0, uplink: 1, others: 1, team: 1, operator: 1, fog: 0.55, threats: 0.4, risk: 0.12, engine: 0.2 }),
       forceStage({ z: 1.08, cx: 0.5, cy: 0.5, follow: 0, uplink: 1, others: 1, team: 1, operator: 1, network: 1, fog: 0.45, threats: 0.35, risk: 0.1 }),
     ];
     const N = stages.length - 1;
@@ -1203,6 +1200,18 @@ const forceCaps = [
     opacity: 0;
     transform: translateY(16px);
     transition: opacity 0.5s var(--ease), transform 0.6s var(--ease);
+  }
+  .force__list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--fg-dim);
+  }
+  .force__list li {
+    padding-left: 18px;
+    border-left: 1px solid var(--signal);
   }
   .force__cap:global(.is-on) {
     opacity: 1;

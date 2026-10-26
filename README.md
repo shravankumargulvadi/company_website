@@ -23,7 +23,7 @@ Requires Node 18.17+ (developed on Node 24).
 - **Astro 5** with static output and no UI framework, plus **TypeScript** in strict mode.
 - **GSAP + ScrollTrigger** for scroll choreography.
 - **Three.js**, lazy-loaded with custom shaders.
-- **Canvas 2D** for the bird's-eye force view (chapters 04–07) and the no-WebGL fallbacks.
+- **Canvas 2D** for the bird's-eye force view (chapters 04–05) and the no-WebGL fallbacks.
 - Self-hosted fonts via Fontsource: Instrument Serif (display), Inter Tight (body), IBM Plex Mono.
 
 ### Shared simulation layer (`src/lib/`)
@@ -50,7 +50,7 @@ Copy, contact details and proof media are kept in `src/config/` so they can be c
   1. Hero, the shift, a different world.
   2. **Reality → Perception → Belief → Risk → Decision** on one 3D terrain with a ground vehicle. At *Risk* the terrain lifts into a cost field: height is the combined risk, colour the source (terrain amber, ambiguous sensing violet, electronic warfare red). These fields also feed `riskAt`, so the planned path really avoids them.
   3. **03 Connected:** the vehicle drives to its objective and stops, a comms link arcs from it towards the Shunya OS node, and the camera rises to straight top-down.
-  4. **04–07, bird's-eye force chapter:** once the 3D camera is top-down, a fixed Canvas 2D layer (`ForceScene` in `forceScene.ts`, run on the same world with the vehicle at the same spot and scale) cross-fades in and keeps zooming out. At the handoff a ring orbits the vehicle, cycling Perceive → Believe → Assess risk → Plan → Act; it fades as the view widens. Chapters: **Fieldcore OS** (the autonomy on every machine, many bodies), autonomous teams, human–machine teaming, and **Shunya OS**, the mission intelligence layer above it (swarm orchestration, AI-assisted mission planning, fleet management).
+  4. **04–05, bird's-eye force chapter:** once the 3D camera is top-down, a fixed Canvas 2D layer (`ForceScene` in `forceScene.ts`, run on the same world with the vehicle at the same spot and scale) cross-fades in and keeps zooming out. At the handoff a ring labelled Fieldcore OS orbits the vehicle, cycling Perceive → Believe → Assess risk → Plan → Act; it fades as the view widens. Chapters: **Fieldcore OS** (the autonomy on every machine, many bodies), then **Shunya OS**, the mission intelligence layer above it, with shared picture, human intent and mission planning condensed into one slide.
   5. **09 Fieldcore OS:** under-canopy reconnaissance, fixed-wing, underground and pilot-assistance demos, see below.
   6. Closing CTA.
 - **Implementation:** vanilla Three.js with one terrain mesh and a custom shader driven by scroll keyframes (`KEYS` → `SceneState`, including `comm` and `bev` for the handoff; the lead vehicle's progress `drive` is tied linearly to scroll so it arrives at the goal smoothly). `worldA.ts` holds the shared world options, goal and Shunya OS node so the 3D and 2D views line up. If WebGL is unavailable, a Canvas 2D fallback is used.

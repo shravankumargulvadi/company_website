@@ -505,6 +505,10 @@ export class ForceScene {
       ctx.strokeStyle = `rgba(143,216,204,${0.6 * s.engine})`;
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = mono(11);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = `rgba(143,216,204,${s.engine})`;
+      ctx.fillText('FIELDCORE OS', 0, -R * 0.5);
       const steps = ['PERCEIVE', 'BELIEVE', 'ASSESS RISK', 'PLAN', 'ACT'];
       const clock = this.reducedMotion ? 0 : this.time;
       const rot = clock * 0.5;
