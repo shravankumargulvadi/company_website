@@ -36,11 +36,6 @@ const pilotBeats = [
   { h: 'A safer line into the clearing.', p: 'The lowest-risk approach is highlighted. The alternatives stay visible so the pilot can compare.' },
   { h: 'Guidance, all the way to touchdown.', p: 'The aircraft follows the recommended approach onto a level clearing within the uneven terrain.' },
 ];
-const deterSteps = [
-  { h: 'Autonomous capabilities at scale.', p: 'Fieldcore OS on every machine. Shunya OS across the force.' },
-  { h: 'Defensive and offensive superiority.', p: 'Machines that see, decide and act where people cannot, on defence or in attack.' },
-  { h: 'Deterrence through denial and punishment.', p: 'An adversary who cannot win, and cannot avoid the cost, does not start.' },
-];
 const forceCaps = [
   { e: '04 — Fieldcore OS', h: 'Fieldcore OS. One autonomy, many bodies.', p: 'The autonomy that runs on every machine: ground, air, legged and maritime, each with its own sense of what is risky.', l: [] as string[] },
   { e: '05 — Shunya OS', h: 'Shunya OS. Many machines, one mission.', p: 'The mission intelligence layer above Fieldcore OS.', l: ['Machines share one picture of the world.', 'People set the intent and stay in command.', 'Missions are planned, tasked and re-planned as they unfold.'] },
@@ -166,24 +161,6 @@ const forceCaps = [
       </div>
     </section>
 
-    <section class="sec" data-sec="deter" style="--h: 320vh">
-      <div class="sticky deter__sticky">
-        <div class="deter">
-          <p class="eyebrow">06 — Why it matters</p>
-          <ol class="deter__steps">
-            {deterSteps.map((d, i) => (
-              <li data-step={i}>
-                <span class="deter__n mono">{String(i + 1).padStart(2, '0')}</span>
-                <div class="deter__copy">
-                  <h2 class="headline">{d.h}</h2>
-                  <p class="lede">{d.p}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-    </section>
 
     <section class="deep" data-sec="deep" data-tab="forest" style="--h: 2420vh">
       <div class="deep__sticky">
@@ -459,21 +436,6 @@ const forceCaps = [
   updateForceFade();
   window.addEventListener('scroll', updateForceFade, { passive: true });
 
-  /* A connected argument: keep earlier steps visible as the next one takes focus. */
-  const deterSteps = [...sections.get('deter')!.querySelectorAll<HTMLElement>('[data-step]')];
-  const updateDeter = () => {
-    const p = sectionProgress('deter');
-    const active = Math.min(deterSteps.length - 1, Math.floor(p * deterSteps.length));
-    deterSteps.forEach((el, i) => {
-      el.classList.toggle('is-on', i <= active);
-      el.classList.toggle('is-current', i === active);
-      if (i === active) el.setAttribute('aria-current', 'step');
-      else el.removeAttribute('aria-current');
-    });
-  };
-  updateDeter();
-  window.addEventListener('scroll', updateDeter, { passive: true });
-  window.addEventListener('resize', updateDeter);
   whenNear(sections.get('link')!, async () => {
     const [{ ForceScene, forceStage, stateAt: forceAt }, { createWorld }] = await Promise.all([
       import('../components/candidate-a/forceScene'),
@@ -1647,81 +1609,6 @@ const forceCaps = [
     outline: 1px solid var(--signal);
     outline-offset: 2px;
   }
-  .deter__sticky {
-    justify-content: center;
-    background: radial-gradient(70% 70% at 50% 50%, rgba(6, 7, 8, 0.82) 0%, rgba(6, 7, 8, 0.55) 100%);
-  }
-  .deter {
-    display: grid;
-    gap: clamp(24px, 4vh, 44px);
-    max-width: 920px;
-    width: 100%;
-  }
-  .deter__steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: clamp(24px, 4vh, 44px);
-  }
-  .deter__steps li {
-    position: relative;
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    column-gap: clamp(18px, 2.5vw, 36px);
-  }
-  .deter__steps li:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    left: 17px;
-    top: 44px;
-    bottom: calc(-1 * clamp(24px, 4vh, 44px) + 8px);
-    width: 1px;
-    background: var(--line);
-    transition: background 0.6s var(--ease);
-  }
-  .deter__steps li:global(.is-on):not(:last-child)::after {
-    background: linear-gradient(var(--accent), var(--line));
-  }
-  .deter__copy {
-    opacity: 0.55;
-    transition: opacity 0.6s var(--ease);
-  }
-  .deter__steps li:global(.is-on) .deter__copy {
-    opacity: 0.82;
-  }
-  .deter__steps li:global(.is-current) .deter__copy {
-    opacity: 1;
-  }
-  .deter__n {
-    display: grid;
-    place-items: center;
-    align-self: start;
-    width: 36px;
-    height: 36px;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    color: var(--fg-faint);
-    border: 1px solid var(--line);
-    border-radius: 50%;
-    transition: color 0.6s var(--ease), border-color 0.6s var(--ease), background 0.6s var(--ease);
-  }
-  .deter__steps li:global(.is-on) .deter__n {
-    color: var(--accent);
-    border-color: rgba(255, 179, 71, 0.45);
-    background: rgba(255, 179, 71, 0.06);
-  }
-  .deter__steps .headline {
-    font-size: clamp(28px, 3.2vw, 46px);
-    line-height: 1.1;
-    max-width: 26ch;
-    text-wrap: balance;
-  }
-  .deter__steps .lede {
-    margin-top: 10px;
-    max-width: 42em;
-    text-wrap: pretty;
-  }
   .deep.is-flat[data-tab='ground'] .deep__tag--r {
     display: none;
   }
@@ -1765,26 +1652,6 @@ const forceCaps = [
     }
     .panel--right {
       margin-left: 0;
-    }
-    .deter__sticky {
-      align-items: center;
-      padding-top: 72px;
-      padding-bottom: 32px;
-    }
-    .deter__steps .headline {
-      font-size: clamp(22px, 5.8vw, 32px);
-    }
-    .deter__steps .lede {
-      font-size: 14px;
-      line-height: 1.4;
-      margin-top: 8px;
-    }
-    .deter,
-    .deter__steps {
-      gap: 24px;
-    }
-    .deter__steps li:not(:last-child)::after {
-      bottom: -16px;
     }
     .versus {
       grid-template-columns: 1fr;

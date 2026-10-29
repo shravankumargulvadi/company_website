@@ -53,12 +53,7 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
      - 04 Fieldcore OS (one autonomy, many bodies)
      - 05 Shunya OS (mission intelligence layer; shared picture, human intent and mission planning as a short list on the same slide; the founder asked for one condensed slide instead of separate teams / teaming slides)
    - The HUD shows machine/operator/team counts and a scale bar.
-6. **06 Why it matters:** the deterrence framing. Three steps light up in turn:
-   1. Autonomous capabilities at scale.
-   2. Defensive and offensive superiority.
-   3. Deterrence through denial and punishment.
-
-   The fixed bird's-eye canvas stays behind it, heavily dimmed.
+6. The former "Why it matters" slide (autonomy at scale → defensive and offensive superiority → deterrence) was removed; that argument now lives in the hero and/or closing copy.
 7. **Fieldcore OS applications:** a persistent product heading states **Fieldcore OS · In development**. It is the platform under development; the tabs illustrate applications. Scrolling automatically advances through **Scout the route (under-canopy) → Stay unseen (fixed-wing) → Explore safely (underground) → Land safely (pilot assistance)**. Tab labels name what each demo shows; the "Application ·" line names the setting. Each application has its own full scroll range; tabs jump to its start and support keyboard navigation. Mobile uses two rows. No-WebGL mode keeps under-canopy, underground and pilot assistance through Canvas fallbacks.
    - **Under-canopy** (`forestScene.ts`, `forestRecon.ts`, `forestMap2d.ts`): a quadrotor lifts from a UGV launch deck, checks hazards and scouts the eastern corridor. The route turns green and is labelled low risk before the UGV starts. A short camera handoff follows the vehicle, while the map retains the scout, UGV and team. Unobserved forest stays unknown.
    - **Pilot assistance** (`landingScene.ts`, `landing.ts`, `landingMap2d.ts`): a gear-mounted camera views uneven terrain through dusk and fog. A parallel map shows 64–128 weighted approach samples and their mean. The pilot remains in command; the sequence is illustrative, not a flight controller.
@@ -83,8 +78,7 @@ All of A is scroll-driven. Scroll keyframes (`KEYS`) are interpolated into a `Sc
 - Ground demo: at the start, the map is framed partly off the right edge. The drop is hard to see in the dark (the red edge line does the work).
 - Air demo: the "planned" and "re-plan" labels can overlap. The aircraft and canyon are simple placeholders.
 - 3D → 2D cross-fade: the 3D UGV model is much larger than the 2D icon. The comms line alignment is approximate.
-- The deterrence section's backdrop is very dark.
-- Mobile was checked only partly, at 390×844 earlier. The tabs and deterrence section are unchecked on mobile.
+- Mobile was checked only partly, at 390×844 earlier. The tabs are unchecked on mobile.
 - The no-WebGL fallback has not been re-checked; the Air tab is hidden there. Real-GPU performance is unmeasured; everything was tested with software WebGL.
 - Contact form: Web3Forms key `contactFormKey` in `src/config/site.ts` forwards to the founder’s inbox (the form shows a not-available message if it is empty). Placeholders: procedural terrain, line-art glyphs. The company name is RTA Systems; the browser tab shows only that.
 - Current environment has no browser connected to the computer-use tool; visual screenshots cannot be claimed from the current run. Model, geometry, build and TypeScript checks are available. The documented `~/.nvm/nvm.sh` is also absent here; use installed Node when that startup file is unavailable.
