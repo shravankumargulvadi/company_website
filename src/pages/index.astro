@@ -247,7 +247,7 @@ const forceCaps = [
     <section class="sec" data-sec="close" id="contact" style="--h: 130vh">
       <div class="sticky">
         <div class="panel panel--center" data-fade>
-          <p class="chain mono">Autonomy at scale<span aria-hidden="true">→</span>Defensive and offensive superiority<span aria-hidden="true">→</span></p>
+          <p class="chain mono"><span>Autonomy at scale <b aria-hidden="true">→</b></span><span>Defensive and offensive superiority <b aria-hidden="true">→</b></span></p>
           <h2 class="display">Deterrence<br /><em>through autonomy.</em></h2>
           <p class="lede">Building the autonomy layer for machines operating where the world is uncertain.</p>
           <div class="ctas">
@@ -955,7 +955,17 @@ const forceCaps = [
     color: var(--fg-dim);
   }
   .chain span {
+    white-space: nowrap;
+  }
+  .chain b {
+    font-weight: inherit;
     color: var(--accent);
+  }
+  @media (max-width: 720px) {
+    .chain {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
   }
   .hint {
     display: flex;
