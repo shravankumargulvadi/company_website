@@ -58,7 +58,7 @@ const forceCaps = [
     <section class="sec" data-sec="hero" style="--h: 150vh">
       <div class="sticky">
         <div class="panel panel--hero" data-hero>
-          <p class="chain mono">Autonomy at scale<span aria-hidden="true">→</span>Defensive and offensive superiority<span aria-hidden="true">→</span></p>
+          <p class="chain mono"><span>Autonomy at scale <b aria-hidden="true">→</b></span><span>Defensive and offensive superiority <b aria-hidden="true">→</b></span></p>
           <h1 class="display">Deterrence<br /><em>through autonomy.</em></h1>
           <p class="hint mono"><span class="hint__lens"></span>Scroll to see what we’re building</p>
         </div>
@@ -953,7 +953,17 @@ const forceCaps = [
     color: var(--fg-dim);
   }
   .chain span {
+    white-space: nowrap;
+  }
+  .chain b {
+    font-weight: inherit;
     color: var(--accent);
+  }
+  @media (max-width: 720px) {
+    .chain {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
   }
   .hint {
     display: flex;
