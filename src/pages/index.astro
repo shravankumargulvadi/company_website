@@ -6,11 +6,11 @@ import ContactDialog from '../components/shared/ContactDialog.astro';
 import { site } from '../config/site';
 
 const stages = [
-  { k: 'Reality', h: 'The world as it is.', p: 'Uneven, partially hidden, and contested.' },
-  { k: 'Perception', h: 'What the sensors return.', p: 'Sparse, noisy, limited by range and line of sight.' },
-  { k: 'Belief', h: 'What the machine believes.', p: 'A model of the world — including where knowledge runs out.' },
-  { k: 'Risk', h: 'What could go wrong.', p: 'Terrain, ambiguous sensing, electronic warfare and the unknown, weighed together.' },
-  { k: 'Decision', h: 'What it chooses to do.', p: 'Many possible paths. One taken, with the consequences understood.' },
+  { k: 'Reality', h: 'The real world isn’t tidy.', p: 'Broken ground, poor visibility, no map, and an adversary working against you.' },
+  { k: 'Perception', h: 'Fieldcore OS senses the world in many ways at once.', p: 'Each sensor sees part of the picture, limited by range, light and line of sight.' },
+  { k: 'Belief', h: 'It builds its picture of the world.', p: 'What it has seen, how sure it is, and where its knowledge runs out.' },
+  { k: 'Risk', h: 'It weighs what could go wrong.', p: 'Terrain, ambiguous sensing, electronic warfare and the unknown, weighed together.' },
+  { k: 'Decision', h: 'Then it chooses how to move.', p: 'Many possible paths. One taken, with the consequences understood.' },
 ];
 const beats = [
   { h: 'No GPS. No light. No map.', p: 'Underground, under canopy, inside structures: where remote control fails first.' },
@@ -36,16 +36,9 @@ const pilotBeats = [
   { h: 'A safer line into the clearing.', p: 'The lowest-risk approach is highlighted. The alternatives stay visible so the pilot can compare.' },
   { h: 'Guidance, all the way to touchdown.', p: 'The aircraft follows the recommended approach onto a level clearing within the uneven terrain.' },
 ];
-const deterSteps = [
-  { h: 'Autonomous capabilities at scale.', p: 'Fieldcore OS on every machine. Shunya OS across the force.' },
-  { h: 'Defensive and offensive superiority.', p: 'Machines that see, decide and act where people cannot, on defence or in attack.' },
-  { h: 'Deterrence through denial and punishment.', p: 'An adversary who cannot win, and cannot avoid the cost, does not start.' },
-];
 const forceCaps = [
-  { e: '04 — Fieldcore OS', h: 'Fieldcore OS. One autonomy, many bodies.', p: 'The autonomy that runs on every machine: ground, air, legged and maritime, each with its own sense of what is risky.' },
-  { e: '05 — Autonomous teams', h: 'Machines that share what they know.', p: 'One picture of the world, built together. Tasks go to the machine best placed to carry them out.' },
-  { e: '06 — Human–machine teaming', h: 'Humans set intent. Machines carry it out.', p: 'Operators supervise many machines at once and stay in command of the decisions that matter.' },
-  { e: '07 — Shunya OS', h: 'Shunya OS. The mission intelligence layer.', p: 'Above Fieldcore: orchestrating heterogeneous swarms, AI-assisted mission planning and fleet management, re-planning as the mission unfolds.' },
+  { e: '04 — Fieldcore OS', h: 'Fieldcore OS. One autonomy, many bodies.', p: 'The autonomy that runs on every machine: ground, air, legged and maritime, each with its own sense of what is risky.', l: [] as string[] },
+  { e: '05 — Shunya OS', h: 'Shunya OS. Many machines, one mission.', p: 'The mission intelligence layer above Fieldcore OS.', l: ['Machines share one picture of the world.', 'People set the intent and stay in command.', 'Missions are planned, tasked and re-planned as they unfold.'] },
 ];
 ---
 
@@ -66,7 +59,7 @@ const forceCaps = [
       <div class="sticky">
         <div class="panel panel--hero" data-hero>
           <h1 class="display">Deterrence<br /><em>through autonomy.</em></h1>
-          <p class="lede">{site.description}</p>
+          <p class="lede">Autonomy at scale gives defensive and offensive superiority. An adversary facing both does not start.</p>
           <p class="hint mono"><span class="hint__lens"></span>Scroll to see what we’re building</p>
         </div>
       </div>
@@ -104,13 +97,14 @@ const forceCaps = [
     <section class="sec" data-sec="reason" style="--h: 620vh">
       <div class="sticky">
         <div class="reason" data-fade>
-          <h2 class="headline reason__title">It doesn't just map the world.<br /><em>It reasons about what it doesn't know.</em></h2>
+          <h2 class="headline reason__title">
+            {stages.map((s, i) => <span class="reason__line" data-stage-title={i} aria-hidden={i === 0 ? undefined : 'true'}>{s.h}</span>)}
+          </h2>
           <ol class="rail" data-rail>
             <span class="rail__bar"><span class="rail__fill" data-rail-fill></span></span>
             {stages.map((s, i) => (
               <li data-stage={i}>
                 <span class="rail__k mono">{String(i + 1).padStart(2, '0')} {s.k}</span>
-                <span class="rail__h">{s.h}</span>
                 <span class="rail__p">{s.p}</span>
                 {s.k === 'Risk' && (
                   <span class="rail__p rail__legend mono">
@@ -143,7 +137,7 @@ const forceCaps = [
       </div>
     </section>
 
-    <section class="force" data-sec="force" style="--h: 640vh">
+    <section class="force" data-sec="force" style="--h: 380vh">
       <div class="force__sticky">
         <p class="sr-only">On every machine, Fieldcore OS runs one loop: perceive, believe, assess risk, plan, act.</p>
         <div class="force__caps">
@@ -152,6 +146,7 @@ const forceCaps = [
               <p class="eyebrow">{c.e}</p>
               <h2 class="headline">{c.h}</h2>
               <p class="lede">{c.p}</p>
+              {c.l.length > 0 && <ul class="force__list">{c.l.map((t) => <li>{t}</li>)}</ul>}
             </div>
           ))}
         </div>
@@ -166,24 +161,6 @@ const forceCaps = [
       </div>
     </section>
 
-    <section class="sec" data-sec="deter" style="--h: 320vh">
-      <div class="sticky deter__sticky">
-        <div class="deter">
-          <p class="eyebrow">08 — Why it matters</p>
-          <ol class="deter__steps">
-            {deterSteps.map((d, i) => (
-              <li data-step={i}>
-                <span class="deter__n mono">{String(i + 1).padStart(2, '0')}</span>
-                <div class="deter__copy">
-                  <h2 class="headline">{d.h}</h2>
-                  <p class="lede">{d.p}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-    </section>
 
     <section class="deep" data-sec="deep" data-tab="forest" style="--h: 2420vh">
       <div class="deep__sticky">
@@ -270,6 +247,7 @@ const forceCaps = [
     <section class="sec" data-sec="close" id="contact" style="--h: 130vh">
       <div class="sticky">
         <div class="panel panel--center" data-fade>
+          <p class="chain mono"><span>Autonomy at scale <b aria-hidden="true">→</b><i class="sr-only">gives</i></span><span>Defensive and offensive superiority <b aria-hidden="true">→</b><i class="sr-only">which leads to</i></span></p>
           <h2 class="display">Deterrence<br /><em>through autonomy.</em></h2>
           <p class="lede">Building the autonomy layer for machines operating where the world is uncertain.</p>
           <div class="ctas">
@@ -380,6 +358,7 @@ const forceCaps = [
   const rail = document.querySelector<HTMLElement>('[data-rail]')!;
   const railItems = [...rail.querySelectorAll<HTMLElement>('[data-stage]')];
   const railFill = document.querySelector<HTMLElement>('[data-rail-fill]')!;
+  const stageTitles = [...document.querySelectorAll<HTMLElement>('[data-stage-title]')];
   const coverers = [sections.get('deep')!];
   let forceOpacity = 0;
   const STAGE_AT = [0, 0.2, 0.4, 0.6, 0.8];
@@ -411,6 +390,11 @@ const forceCaps = [
     reasonStage = active;
     railItems.forEach((li, i) => li.classList.toggle('is-active', i === active));
     railItems.forEach((li, i) => li.classList.toggle('is-past', i < active));
+    stageTitles.forEach((el, i) => {
+      el.classList.toggle('is-active', i === active);
+      if (i === active) el.removeAttribute('aria-hidden');
+      else el.setAttribute('aria-hidden', 'true');
+    });
     railFill.style.transform = `scaleY(${p})`;
   }
 
@@ -453,21 +437,6 @@ const forceCaps = [
   updateForceFade();
   window.addEventListener('scroll', updateForceFade, { passive: true });
 
-  /* A connected argument: keep earlier steps visible as the next one takes focus. */
-  const deterSteps = [...sections.get('deter')!.querySelectorAll<HTMLElement>('[data-step]')];
-  const updateDeter = () => {
-    const p = sectionProgress('deter');
-    const active = Math.min(deterSteps.length - 1, Math.floor(p * deterSteps.length));
-    deterSteps.forEach((el, i) => {
-      el.classList.toggle('is-on', i <= active);
-      el.classList.toggle('is-current', i === active);
-      if (i === active) el.setAttribute('aria-current', 'step');
-      else el.removeAttribute('aria-current');
-    });
-  };
-  updateDeter();
-  window.addEventListener('scroll', updateDeter, { passive: true });
-  window.addEventListener('resize', updateDeter);
   whenNear(sections.get('link')!, async () => {
     const [{ ForceScene, forceStage, stateAt: forceAt }, { createWorld }] = await Promise.all([
       import('../components/candidate-a/forceScene'),
@@ -479,8 +448,6 @@ const forceCaps = [
     const stages = [
       forceStage({ z: z0, uplink: 1, move: 0, engine: 1 }),
       forceStage({ z: 0.42, follow: 0.5, uplink: 1, others: 1, fog: 0.35, threats: 0.3, engine: 0.7 }),
-      forceStage({ z: 0.72, cx: 0.62, cy: 0.4, follow: 0, uplink: 1, others: 1, team: 1, fog: 0.55, threats: 0.4, risk: 0.15, engine: 0.35 }),
-      forceStage({ z: 0.86, cx: 0.58, cy: 0.44, follow: 0, uplink: 1, others: 1, team: 1, operator: 1, fog: 0.55, threats: 0.4, risk: 0.12, engine: 0.2 }),
       forceStage({ z: 1.08, cx: 0.5, cy: 0.5, follow: 0, uplink: 1, others: 1, team: 1, operator: 1, network: 1, fog: 0.45, threats: 0.35, risk: 0.1 }),
     ];
     const N = stages.length - 1;
@@ -975,6 +942,31 @@ const forceCaps = [
     color: inherit;
     opacity: 0.72;
   }
+  .chain {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px 14px;
+    margin: 0;
+    font-size: 13px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .chain span {
+    white-space: nowrap;
+  }
+  .chain b {
+    font-weight: inherit;
+    color: var(--accent);
+  }
+  @media (max-width: 720px) {
+    .chain {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
+  }
   .hint {
     display: flex;
     align-items: center;
@@ -1030,8 +1022,20 @@ const forceCaps = [
     padding: 16vh 0 10vh;
   }
   .reason__title {
+    display: grid;
     font-size: clamp(28px, 3.4vw, 52px);
-    max-width: 18em;
+    max-width: 16em;
+  }
+  .reason__line {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+  }
+  .reason__line.is-active,
+  .reason__title:not(:has(.is-active)) .reason__line:first-child {
+    opacity: 1;
+    transform: none;
   }
   .reason__annotations {
     position: absolute;
@@ -1118,15 +1122,8 @@ const forceCaps = [
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
-  .rail__h,
   .rail__p {
     display: none;
-  }
-  .rail li.is-active .rail__h {
-    display: block;
-    font-family: var(--font-display);
-    font-size: 30px;
-    line-height: 1.1;
   }
   .rail li.is-active .rail__p {
     display: block;
@@ -1191,6 +1188,18 @@ const forceCaps = [
     opacity: 0;
     transform: translateY(16px);
     transition: opacity 0.5s var(--ease), transform 0.6s var(--ease);
+  }
+  .force__list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--fg-dim);
+  }
+  .force__list li {
+    padding-left: 18px;
+    border-left: 1px solid var(--signal);
   }
   .force__cap:global(.is-on) {
     opacity: 1;
@@ -1626,81 +1635,6 @@ const forceCaps = [
     outline: 1px solid var(--signal);
     outline-offset: 2px;
   }
-  .deter__sticky {
-    justify-content: center;
-    background: radial-gradient(70% 70% at 50% 50%, rgba(6, 7, 8, 0.82) 0%, rgba(6, 7, 8, 0.55) 100%);
-  }
-  .deter {
-    display: grid;
-    gap: clamp(24px, 4vh, 44px);
-    max-width: 920px;
-    width: 100%;
-  }
-  .deter__steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: clamp(24px, 4vh, 44px);
-  }
-  .deter__steps li {
-    position: relative;
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    column-gap: clamp(18px, 2.5vw, 36px);
-  }
-  .deter__steps li:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    left: 17px;
-    top: 44px;
-    bottom: calc(-1 * clamp(24px, 4vh, 44px) + 8px);
-    width: 1px;
-    background: var(--line);
-    transition: background 0.6s var(--ease);
-  }
-  .deter__steps li:global(.is-on):not(:last-child)::after {
-    background: linear-gradient(var(--accent), var(--line));
-  }
-  .deter__copy {
-    opacity: 0.55;
-    transition: opacity 0.6s var(--ease);
-  }
-  .deter__steps li:global(.is-on) .deter__copy {
-    opacity: 0.82;
-  }
-  .deter__steps li:global(.is-current) .deter__copy {
-    opacity: 1;
-  }
-  .deter__n {
-    display: grid;
-    place-items: center;
-    align-self: start;
-    width: 36px;
-    height: 36px;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    color: var(--fg-faint);
-    border: 1px solid var(--line);
-    border-radius: 50%;
-    transition: color 0.6s var(--ease), border-color 0.6s var(--ease), background 0.6s var(--ease);
-  }
-  .deter__steps li:global(.is-on) .deter__n {
-    color: var(--accent);
-    border-color: rgba(255, 179, 71, 0.45);
-    background: rgba(255, 179, 71, 0.06);
-  }
-  .deter__steps .headline {
-    font-size: clamp(28px, 3.2vw, 46px);
-    line-height: 1.1;
-    max-width: 26ch;
-    text-wrap: balance;
-  }
-  .deter__steps .lede {
-    margin-top: 10px;
-    max-width: 42em;
-    text-wrap: pretty;
-  }
   .deep.is-flat[data-tab='ground'] .deep__tag--r {
     display: none;
   }
@@ -1744,26 +1678,6 @@ const forceCaps = [
     }
     .panel--right {
       margin-left: 0;
-    }
-    .deter__sticky {
-      align-items: center;
-      padding-top: 72px;
-      padding-bottom: 32px;
-    }
-    .deter__steps .headline {
-      font-size: clamp(22px, 5.8vw, 32px);
-    }
-    .deter__steps .lede {
-      font-size: 14px;
-      line-height: 1.4;
-      margin-top: 8px;
-    }
-    .deter,
-    .deter__steps {
-      gap: 24px;
-    }
-    .deter__steps li:not(:last-child)::after {
-      bottom: -16px;
     }
     .versus {
       grid-template-columns: 1fr;
@@ -1901,9 +1815,6 @@ const forceCaps = [
     }
     .force__counts {
       gap: 12px;
-    }
-    .rail li.is-active .rail__h {
-      font-size: 24px;
     }
   }
 </style>
