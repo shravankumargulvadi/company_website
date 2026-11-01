@@ -405,7 +405,7 @@ const forceCaps = [
     annotations.hidden = !stationary || reasonStage < 1 || reasonStage > 3 || bounds.top > 0 || bounds.bottom < window.innerHeight || !ready;
     if (annotations.hidden) return;
     const copy = kind === 'perception' ? ['Multimodal sensor fusion', 'Returns from every sensor, combined into one picture.']
-      : kind === 'belief' ? ['The robot’s understanding', 'Lit contours show the surroundings it has mapped.']
+      : kind === 'belief' ? ['The robot’s understanding', 'Lit contours show the surroundings it has built a belief model of.']
       : ['Taller peaks mean higher risk', 'Raised areas show where movement is more risky.'];
     annotationTitle.textContent = copy[0]; annotationCopy.textContent = copy[1];
     annotationSvg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
